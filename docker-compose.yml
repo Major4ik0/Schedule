@@ -1,0 +1,11 @@
+version: '6.0'
+
+services:
+  web:
+    image: schedule
+    build: .
+    ports:
+      - "5123:5123"
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs

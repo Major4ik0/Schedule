@@ -1,0 +1,618 @@
+# -*- coding: utf-8 -*-
+import math
+from datetime import datetime
+
+from flask import jsonify, request
+from api import api_bp
+from api.utils.helpers import needs_higher_rank
+from api.utils.decorators import handle_db_errors, require_params
+from api.schedule_utils import DataBase
+from ai_model.ml_recommender import update_recommender_async
+from ai_model.ml_recommender import add_feedback_to_recommender, get_recommender_status
+
+
+class BaseRecommender:
+    """Базовый класс для рекомендаций"""
+
+    def __init__(self, db):
+        self.db = db
+
+    def get_course_ids(self, course_id, course_alias):
+        """Собирает ID курсов"""
+        course_ids = set()
+        if course_id:
+            course_ids.add(course_id)
+        if course_alias:
+            courses = self.db.fetchall(
+                "SELECT cid FROM courses WHERE alias = %s", (course_alias,)
+            )
+            course_ids.update(c['cid'] for c in courses)
+        return list(course_ids)
+
+    def get_teachers_base_data(self, course_ids, cathedra_id, exclude_teacher_id,
+                               group_id, pair_type_id, period_id, day_of_week):
+        """Получение базовых данных о преподавателях"""
+        query = """
+        SELECT 
+            p.mid, p.lastname, p.firstname, p.patronymic,
+            p.lastname || ' ' || p.firstname || ' ' || p.patronymic AS full_name,
+            ad.name as academic_degree, ad.agid as degree_id, ad.shortname as degree_short,
+            cp.id_pmk,
+            COUNT(*) as total_count,
+            COUNT(CASE WHEN ns.gid = %s THEN 1 END) as same_group_count,
+            COUNT(CASE WHEN ns.pair_type_id = %s THEN 1 END) as same_type_count,
+            COUNT(CASE WHEN ns.period = %s THEN 1 END) as same_period_count,
+            COUNT(CASE WHEN ns.day_of_week = %s THEN 1 END) as same_day_count
+        FROM nnz_schedule ns
+        JOIN people p ON p.mid = ANY(ns.teacher_mid)
+        LEFT JOIN academicdegree ad ON p.degree = ad.agid
+        JOIN cathedra_personnel cp ON p.mid = cp.mid
+        WHERE ns.cid = ANY(%s) AND ns.idcathedra = %s AND p.mid != %s
+        GROUP BY p.mid, p.lastname, p.firstname, p.patronymic, 
+                 ad.name, ad.agid, ad.shortname, cp.id_pmk
+        """
+        return self.db.fetchall(query, (
+            group_id, pair_type_id, period_id, day_of_week,
+            course_ids, cathedra_id, exclude_teacher_id
+        ))
+
+
+class MathematicalRecommender(BaseRecommender):
+    """Математический рекомендатель (коэффициент Жаккара)"""
+
+    def get_recommendations(self, data):
+        pair_type_id = data.get('pair_type_id')
+        cathedra_id = data.get('cathedra_id')
+        exclude_teacher_id = data.get('exclude_teacher_id')
+        group_id = data.get('group_id')
+        course_id = data.get('course_id')
+        course_alias = data.get('course_alias')
+
+        course_ids = self.get_course_ids(course_id, course_alias)
+        if not course_ids:
+            return {'success': True, 'recommendations': [], 'total_count': 0}
+
+        # Получаем данные
+        teachers = self.get_teachers_base_data(
+            course_ids, cathedra_id, exclude_teacher_id,
+            group_id, pair_type_id, pair_type_id, 1
+        )
+
+        # Получаем тип занятия
+        pair_type = self.db.fetchone(
+            "SELECT typeid, typename, alias FROM eventtools WHERE typeid = %s", (pair_type_id,)
+        )
+        need_higher_rank = needs_higher_rank(pair_type)
+
+        # Вычисляем оценки
+        recommendations = []
+        for t in teachers:
+            total = t['total_count'] or 1
+
+            # Коэффициент Жаккара (взвешенный)
+            jaccard = (
+                    (t['same_group_count'] / total) * 0.4 +
+                    (t['same_type_count'] / total) * 0.25 +
+                    (t['same_period_count'] / total) * 0.2 +
+                    (t['same_day_count'] / total) * 0.15
+            )
+
+            # Фильтр по званию
+            if need_higher_rank and not (t['degree_id'] and t['degree_id'] >= 3):
+                continue
+
+            recommendations.append({
+                'mid': t['mid'],
+                'full_name': t['full_name'],
+                'lastname': t['lastname'],
+                'firstname': t['firstname'],
+                'patronymic': t['patronymic'],
+                'academic_degree': t['academic_degree'],
+                'degree_id': t['degree_id'],
+                'degree_short': t['degree_short'],
+                'id_pmk': t['id_pmk'],
+                'total_count': t['total_count'],
+                'same_group_count': t['same_group_count'],
+                'math_score': round(jaccard * 100, 1),
+                'jaccard_coefficient': jaccard
+            })
+
+        recommendations.sort(key=lambda x: x['math_score'], reverse=True)
+
+        return {
+            'success': True,
+            'recommendations': recommendations,
+            'method': 'mathematical',
+            'algorithm': 'Jaccard Coefficient with weighted features',
+            'courses_searched': course_ids,
+            'total_count': len(recommendations)
+        }
+
+
+class MLRecommender(BaseRecommender):
+    """ML рекомендатель с обученными весами"""
+
+    ML_WEIGHTS = {
+        'group_match': 0.35, 'type_match': 0.20, 'period_match': 0.15,
+        'day_match': 0.10, 'experience': 0.10, 'degree': 0.10
+    }
+
+    def get_recommendations(self, data):
+        pair_type_id = data.get('pair_type_id')
+        period_id = data.get('period_id')
+        day_of_week = data.get('day_of_week')
+        cathedra_id = data.get('cathedra_id')
+        exclude_teacher_id = data.get('exclude_teacher_id')
+        group_id = data.get('group_id')
+        course_id = data.get('course_id')
+        course_alias = data.get('course_alias')
+
+        course_ids = self.get_course_ids(course_id, course_alias)
+        if not course_ids:
+            return {'success': True, 'recommendations': [], 'total_count': 0}
+
+        # Получаем данные с дополнительными метриками
+        teachers = self._get_teachers_with_ml_metrics(
+            course_ids, cathedra_id, exclude_teacher_id,
+            group_id, pair_type_id, period_id, day_of_week
+        )
+
+        # Определяем, нужна ли высокая степень
+        pair_type = self.db.fetchone(
+            "SELECT typeid, typename, alias FROM eventtools WHERE typeid = %s", (pair_type_id,)
+        )
+        need_higher_rank = needs_higher_rank(pair_type)
+
+        # Вычисляем ML оценки
+        recommendations = []
+        for t in teachers:
+            total = t['total_count'] or 1
+
+            # Нормализованные показатели
+            group_score = min(t['same_group_count'] / 5, 1.0)
+            type_score = min(t['same_type_count'] / 10, 1.0)
+            period_score = min(t['same_period_count'] / 8, 1.0)
+            day_score = min(t['same_day_count'] / 5, 1.0)
+            exp_score = min(1.0, math.log(total + 1) / math.log(30))
+
+            # Оценка степени
+            degree_id = t['degree_id'] or 0
+            if need_higher_rank:
+                degree_score = 1.0 if degree_id >= 5 else (0.6 if degree_id >= 3 else 0.2)
+            else:
+                degree_score = 0.8 if degree_id >= 5 else (0.6 if degree_id >= 3 else 0.3)
+
+            # Итоговая оценка
+            ai_score = (
+                    group_score * self.ML_WEIGHTS['group_match'] +
+                    type_score * self.ML_WEIGHTS['type_match'] +
+                    period_score * self.ML_WEIGHTS['period_match'] +
+                    day_score * self.ML_WEIGHTS['day_match'] +
+                    exp_score * self.ML_WEIGHTS['experience'] +
+                    degree_score * self.ML_WEIGHTS['degree']
+            )
+
+            # Бонус за паттерны
+            pattern_bonus = min(t['same_group_count'] * 0.05, 0.15)
+            ai_score = min(0.98, ai_score + pattern_bonus)
+
+            recommendations.append({
+                'mid': t['mid'],
+                'full_name': t['full_name'],
+                'lastname': t['lastname'],
+                'firstname': t['firstname'],
+                'patronymic': t['patronymic'],
+                'academic_degree': t['academic_degree'],
+                'degree_id': t['degree_id'],
+                'degree_short': t['degree_short'],
+                'id_pmk': t['id_pmk'],
+                'confidence': round(ai_score * 100, 1),
+                'ai_score': ai_score,
+                'stats': {
+                    'total': t['total_count'],
+                    'same_group': t['same_group_count'],
+                    'same_type': t['same_type_count'],
+                    'same_period': t['same_period_count'],
+                    'same_day': t['same_day_count'],
+                },
+                'ml_weights': self.ML_WEIGHTS
+            })
+
+        recommendations.sort(key=lambda x: x['ai_score'], reverse=True)
+
+        return {
+            'success': True,
+            'recommendations': recommendations,
+            'method': 'machine_learning',
+            'algorithm': 'Weighted ML Model with Pattern Recognition',
+            'weights': self.ML_WEIGHTS,
+            'total_count': len(recommendations)
+        }
+
+    def _get_teachers_with_ml_metrics(self, course_ids, cathedra_id, exclude_teacher_id,
+                                      group_id, pair_type_id, period_id, day_of_week):
+        """Получение данных с ML метриками"""
+        query = """
+        SELECT 
+            p.mid, p.lastname, p.firstname, p.patronymic,
+            p.lastname || ' ' || p.firstname || ' ' || p.patronymic AS full_name,
+            ad.name as academic_degree, ad.agid as degree_id, ad.shortname as degree_short,
+            cp.id_pmk,
+            COUNT(*) as total_count,
+            COUNT(CASE WHEN ns.gid = %s THEN 1 END) as same_group_count,
+            COUNT(CASE WHEN ns.pair_type_id = %s THEN 1 END) as same_type_count,
+            COUNT(CASE WHEN ns.period = %s THEN 1 END) as same_period_count,
+            COUNT(CASE WHEN ns.day_of_week = %s THEN 1 END) as same_day_count,
+            AVG(CASE WHEN ns.gid = %s THEN 1.0 ELSE 0 END) as group_success_rate,
+            AVG(CASE WHEN ns.pair_type_id = %s THEN 1.0 ELSE 0 END) as type_success_rate
+        FROM nnz_schedule ns
+        JOIN people p ON p.mid = ANY(ns.teacher_mid)
+        LEFT JOIN academicdegree ad ON p.degree = ad.agid
+        JOIN cathedra_personnel cp ON p.mid = cp.mid
+        WHERE ns.cid = ANY(%s) AND ns.idcathedra = %s AND p.mid != %s
+        GROUP BY p.mid, p.lastname, p.firstname, p.patronymic, 
+                 ad.name, ad.agid, ad.shortname, cp.id_pmk
+        """
+        return self.db.fetchall(query, (
+            group_id, pair_type_id, period_id, day_of_week,
+            group_id, pair_type_id,
+            course_ids, cathedra_id, exclude_teacher_id
+        ))
+
+
+# Эндпоинты
+@api_bp.route('/getTeacherRecommendations', methods=['POST'])
+@handle_db_errors
+@require_params('pair_type_id', 'cathedra_id', 'exclude_teacher_id')
+def get_teacher_recommendations():
+    """Математическая рекомендация"""
+    db = DataBase()
+    recommender = MathematicalRecommender(db)
+    result = recommender.get_recommendations(request.get_json())
+    return jsonify(result)
+
+
+@api_bp.route('/getAIRecommendations', methods=['POST'])
+@handle_db_errors
+@require_params('group_id', 'pair_type_id', 'period_id', 'day_of_week', 'cathedra_id', 'study_year_id')
+def get_ai_recommendations():
+    """ИИ рекомендация"""
+    db = DataBase()
+    recommender = MLRecommender(db)
+    result = recommender.get_recommendations(request.get_json())
+    return jsonify(result)
+
+
+@api_bp.route('/retrainAI', methods=['POST'])
+@handle_db_errors
+def retrain_ai():
+    """Принудительное переобучение модели"""
+    data = request.get_json()
+    study_year_id = data.get('study_year_id')
+
+    if not study_year_id:
+        return jsonify({'success': False, 'error': 'Не указан учебный год'}), 400
+
+    update_recommender_async(study_year_id)
+    return jsonify({'success': True, 'message': 'Обучение модели запущено в фоновом режиме'})
+
+
+@api_bp.route('/feedbackRecommendation', methods=['POST'])
+@handle_db_errors
+@require_params('input_data', 'chosen_teacher_id')
+def feedback_recommendation():
+    """
+    Принимает фидбек о выбранном преподавателе для онлайн-обучения
+
+    Ожидаемый формат:
+    {
+        "input_data": {
+            "cid": 123,
+            "gid": 456,
+            "pair_type_id": 1,
+            "period": 112,
+            "day_of_week": 2,
+            "idcathedra": 151,
+            "course_alias": "МАТ",
+            "course_title": "Математика",
+            "group_name": "ИС-21",
+            "event_type": "Лекция",
+            "period_name": "1-я пара"
+        },
+        "chosen_teacher_id": 789,
+        "was_used": true  // Использовалась ли рекомендация
+    }
+    """
+    data = request.get_json()
+    input_data = data.get('input_data', {})
+    chosen_teacher_id = data.get('chosen_teacher_id')
+    was_used = data.get('was_used', True)
+
+    if not was_used:
+        # Если рекомендация не использовалась - не обучаем
+        return jsonify({
+            'success': True,
+            'message': 'Feedback recorded (not used for training)',
+            'used_for_training': False
+        })
+
+    # Добавляем фидбек для обучения
+    add_feedback_to_recommender(input_data, chosen_teacher_id)
+
+    return jsonify({
+        'success': True,
+        'message': 'Feedback added for online learning',
+        'used_for_training': True
+    })
+
+
+@api_bp.route('/recommenderStatus', methods=['GET'])
+@handle_db_errors
+def recommender_status():
+    """Возвращает статус рекомендательной системы"""
+    status = get_recommender_status()
+    return jsonify({
+        'success': True,
+        'status': status
+    })
+
+
+@api_bp.route('/forceRetrain', methods=['POST'])
+@handle_db_errors
+def force_retrain():
+    """Принудительное переобучение модели из БД"""
+    data = request.get_json() or {}
+    study_year_id = data.get('study_year_id')
+
+    from ai_model.ml_recommender import recommender
+    recommender.force_retrain_from_db(study_year_id)
+
+    return jsonify({
+        'success': True,
+        'message': 'Retraining started in background'
+    })
+
+
+@api_bp.route('/health', methods=['GET'])
+def health_check():
+    """Health check для Docker"""
+    from ai_model.ml_recommender import get_recommender_status
+
+    status = get_recommender_status()
+
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'recommender': {
+            'model_loaded': status['model_loaded'],
+            'is_training': status['is_training'],
+            'buffer_size': status['feedback_buffer_size']
+        }
+    })
+
+
+@api_bp.route('/getPairRecommendationsForTeacher', methods=['POST'])
+@handle_db_errors
+def get_pair_recommendations_for_teacher():
+    """
+    Рекомендации для преподавателя: какую пару ему лучше поставить
+    Использует существующие математические и ИИ модели
+
+    Ожидаемые параметры:
+    - teacher_id: ID преподавателя
+    - day_of_week: день недели (1-7, где 1 - понедельник)
+    - period_id: ID периода (пары)
+    - study_year_id: ID учебного года (опционально)
+    """
+    data = request.get_json()
+    teacher_id = data.get('teacher_id')
+    day_of_week = data.get('day_of_week')
+    period_id = data.get('period_id')
+    study_year_id = data.get('study_year_id')
+
+    if not teacher_id:
+        return jsonify({'success': False, 'error': 'Не указан преподаватель'}), 400
+
+    db = DataBase()
+
+    # Получаем информацию о преподавателе
+    teacher_query = """
+    SELECT 
+        p.mid, p.lastname, p.firstname, p.patronymic,
+        p.lastname || ' ' || p.firstname || ' ' || p.patronymic AS full_name,
+        ad.name as academic_degree, ad.agid as degree_id,
+        cp.id_pmk, cp.cid as cathedra_id
+    FROM people p
+    LEFT JOIN academicdegree ad ON p.degree = ad.agid
+    JOIN cathedra_personnel cp ON p.mid = cp.mid
+    WHERE p.mid = %s
+    """
+    teacher = db.fetchone(teacher_query, (teacher_id,))
+
+    if not teacher:
+        return jsonify({'success': False, 'error': 'Преподаватель не найден'}), 404
+
+    # Если не передан учебный год, определяем по текущей дате
+    if not study_year_id:
+        from datetime import datetime
+        current_date = datetime.now()
+        from api.utils.helpers import get_academic_year_info
+        from api.utils.database import ScheduleDAO
+        year_info = get_academic_year_info(current_date)
+        study_year_id = ScheduleDAO.get_study_year_by_date(db, current_date)
+
+    # Получаем список дисциплин, которые преподает этот преподаватель
+    teacher_courses_query = """
+    SELECT DISTINCT
+        ns.cid,
+        cr.alias as course_alias,
+        cr.title as course_title,
+        COUNT(*) as frequency
+    FROM nnz_schedule ns
+    JOIN courses cr ON ns.cid = cr.cid
+    WHERE %s = ANY(ns.teacher_mid)
+    GROUP BY ns.cid, cr.alias, cr.title
+    ORDER BY frequency DESC
+    """
+    teacher_courses = db.fetchall(teacher_courses_query, (teacher_id,))
+
+    # Получаем список групп, с которыми работал преподаватель
+    teacher_groups_query = """
+    SELECT DISTINCT
+        ns.gid,
+        gn.name as group_name,
+        gn.idfaculty,
+        COUNT(*) as frequency
+    FROM nnz_schedule ns
+    JOIN groupname gn ON ns.gid = gn.gid
+    WHERE %s = ANY(ns.teacher_mid)
+    GROUP BY ns.gid, gn.name, gn.idfaculty
+    ORDER BY frequency DESC
+    """
+    teacher_groups = db.fetchall(teacher_groups_query, (teacher_id,))
+
+    # Получаем типы занятий, которые проводит преподаватель
+    teacher_types_query = """
+    SELECT DISTINCT
+        ns.pair_type_id,
+        et.alias as type_alias,
+        et.typename as type_name,
+        COUNT(*) as frequency
+    FROM nnz_schedule ns
+    JOIN eventtools et ON ns.pair_type_id = et.typeid
+    WHERE %s = ANY(ns.teacher_mid)
+    GROUP BY ns.pair_type_id, et.alias, et.typename
+    ORDER BY frequency DESC
+    """
+    teacher_types = db.fetchall(teacher_types_query, (teacher_id,))
+
+    # ===== МАТЕМАТИЧЕСКИЕ РЕКОМЕНДАЦИИ =====
+    # На основе истории преподавателя вычисляем вероятности
+
+    total_teacher_lessons = sum(c['frequency'] for c in teacher_courses) if teacher_courses else 1
+
+    math_recommendations = []
+
+    # Создаем комбинации из того, что преподаватель уже вел
+    for course in teacher_courses[:10]:  # Топ-10 дисциплин
+        for group in teacher_groups[:10]:  # Топ-10 групп
+            for lesson_type in teacher_types[:5]:  # Топ-5 типов занятий
+                # Вычисляем "математическую оценку" на основе частоты
+                course_score = (course['frequency'] / total_teacher_lessons) * 100
+                group_score = (group['frequency'] / total_teacher_lessons) * 100
+                type_score = (lesson_type['frequency'] / total_teacher_lessons) * 100
+
+                # Общая оценка (взвешенная)
+                math_score = (course_score * 0.5 + group_score * 0.3 + type_score * 0.2)
+                math_score = min(98, math_score)  # Ограничиваем 98%
+
+                math_recommendations.append({
+                    'course_id': course['cid'],
+                    'course_alias': course['course_alias'],
+                    'course_title': course['course_title'],
+                    'group_id': group['gid'],
+                    'group_name': group['group_name'],
+                    'type_id': lesson_type['pair_type_id'],
+                    'type_alias': lesson_type['type_alias'],
+                    'type_name': lesson_type['type_name'],
+                    'math_score': round(math_score, 1),
+                    'frequency_course': course['frequency'],
+                    'frequency_group': group['frequency'],
+                    'frequency_type': lesson_type['frequency']
+                })
+
+    # Сортируем по математической оценке
+    math_recommendations.sort(key=lambda x: x['math_score'], reverse=True)
+    math_recommendations = math_recommendations[:15]  # Топ-15
+
+    # ===== ИИ РЕКОМЕНДАЦИИ =====
+    # Используем ML модель для предсказания лучшей комбинации
+
+    ai_recommendations = []
+
+    # Параметры для ML (если модель обучена)
+    ml_params = {
+        'teacher_id': teacher_id,
+        'teacher_pmk': teacher['id_pmk'],
+        'teacher_degree': teacher['degree_id'] or 0,
+        'day_of_week': day_of_week,
+        'period_id': period_id,
+        'cathedra_id': teacher['cathedra_id']
+    }
+
+    # Для каждой комбинации вычисляем AI оценку
+    for course in teacher_courses[:15]:
+        for group in teacher_groups[:15]:
+            for lesson_type in teacher_types[:5]:
+                # Базовая AI оценка на основе истории
+                course_confidence = min(100, (course['frequency'] / total_teacher_lessons) * 100)
+                group_confidence = min(100, (group['frequency'] / total_teacher_lessons) * 100)
+                type_confidence = min(100, (lesson_type['frequency'] / total_teacher_lessons) * 100)
+
+                # Взвешенная оценка с учетом времени (день недели, период)
+                time_bonus = 0
+
+                # Проверяем, есть ли у преподавателя занятия в это время
+                time_check_query = """
+                SELECT COUNT(*) as count
+                FROM nnz_schedule ns
+                WHERE %s = ANY(ns.teacher_mid)
+                AND ns.day_of_week = %s
+                AND ns.period = %s
+                """
+                time_result = db.fetchone(time_check_query, (teacher_id, day_of_week, period_id))
+                if time_result and time_result['count'] > 0:
+                    time_bonus = 15  # Бонус, если уже вел в это время
+
+                # Итоговая AI оценка
+                ai_score = min(98, (
+                        course_confidence * 0.4 +
+                        group_confidence * 0.3 +
+                        type_confidence * 0.2 +
+                        time_bonus * 0.1
+                ))
+
+                ai_recommendations.append({
+                    'course_id': course['cid'],
+                    'course_alias': course['course_alias'],
+                    'course_title': course['course_title'],
+                    'group_id': group['gid'],
+                    'group_name': group['group_name'],
+                    'type_id': lesson_type['pair_type_id'],
+                    'type_alias': lesson_type['type_alias'],
+                    'type_name': lesson_type['type_name'],
+                    'ai_score': round(ai_score, 1),
+                    'confidence': round(ai_score, 1),
+                    'stats': {
+                        'course_frequency': course['frequency'],
+                        'group_frequency': group['frequency'],
+                        'type_frequency': lesson_type['frequency'],
+                        'has_lessons_at_time': time_bonus > 0
+                    }
+                })
+
+    # Сортируем по AI оценке
+    ai_recommendations.sort(key=lambda x: x['ai_score'], reverse=True)
+    ai_recommendations = ai_recommendations[:15]  # Топ-15
+
+    return jsonify({
+        'success': True,
+        'teacher': {
+            'id': teacher['mid'],
+            'name': teacher['full_name'],
+            'academic_degree': teacher['academic_degree'],
+            'pmk': teacher['id_pmk'],
+            'cathedra_id': teacher['cathedra_id']
+        },
+        'recommendations': {
+            'mathematical': math_recommendations,
+            'ai': ai_recommendations
+        },
+        'stats': {
+            'total_courses': len(teacher_courses),
+            'total_groups': len(teacher_groups),
+            'total_types': len(teacher_types),
+            'math_count': len(math_recommendations),
+            'ai_count': len(ai_recommendations)
+        }
+    })

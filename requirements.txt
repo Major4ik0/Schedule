@@ -1,0 +1,8 @@
+openpyxl==3.1.5
+Flask==3.1.2
+psycopg2-binary==2.9.11
+numpy==1.26.4
+scikit-learn==1.5.1
+scipy==1.13.1
+joblib==1.4.2
+APScheduler==3.10.4

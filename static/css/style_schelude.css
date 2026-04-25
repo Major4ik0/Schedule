@@ -1,0 +1,622 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Poppins", sans-serif;
+}
+
+a {
+    text-decoration: none;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --index: calc(1vw + 1vh);
+    --transition: 1.5s cubic-bezier(.05, .5, 0, 1);
+}
+
+@font-face {
+    font-family: kamerik-3d;
+    src: url(../fonts/kamerik205-heavy.woff2);
+    font-weight: 900;
+}
+
+@font-face {
+    font-family: merriweather-italic-3d;
+    src: url(../fonts/merriweather-regular-italic.woff2);
+}
+
+.logo {
+    --logo-size: calc(var(--index) * 7.8);
+    width: var(--logo-size);
+    height: var(--logo-size);
+    background-repeat: no-repeat;
+    position: absolute;
+    left: calc(51% - calc(var(--logo-size) / 2));
+    top: calc(var(--index) * 2.8);
+    z-index: 1;
+}
+
+.layers {
+    perspective: 1000px;
+    overflow: hidden;
+}
+
+.layers__container {
+    height: 100vh;
+    min-height: 500px;
+    transform-style: preserve-3d;
+    transform: rotateX(var(--move-y)) rotateY(var(--move-x));
+    will-change: transform;
+    transition: transform var(--transition);
+}
+
+.layers__item {
+    position: absolute;
+    inset: -5vw;
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.layer-1 {
+    transform: translateZ(-55px) scale(1.06);
+}
+
+.layer-2 {
+    transform: translateZ(8px) scale(.8);
+}
+
+.layer-3 {
+    transform: translateZ(180px) scale(.8);
+}
+
+.layer-4 {
+    transform: translateZ(190px) scale(.9);
+}
+
+.layer-5 {
+    transform: translateZ(300px) scale(.90);
+}
+
+.layer-6 {
+    transform: translateZ(380px);
+}
+
+.hero-content {
+    font-size: calc(var(--index) * 1.3);
+    text-align: center;
+    letter-spacing: calc(var(--index) * -.10);
+    line-height: 1.35em;
+    margin-top: calc(var(--index) * -29);
+}
+
+.hero-content span {
+    display: block;
+}
+
+.hero-content__p {
+    text-transform: none;
+    font-family: merriweather-italic-3d;
+    letter-spacing: normal;
+    font-size: calc(var(--index) * .73);
+    line-height: 3;
+}
+
+.layer-4, .layer-5, .layer-6 {
+    pointer-events: none;
+}
+
+.nav_logo,
+.nav_link,
+.button {
+    color: #000000;
+}
+
+.nav_logo {
+    font-size: 25px;
+}
+
+.nav_item {
+    column-gap: 25px;
+}
+
+.nav_link:hover {
+    color: #000000bb;
+}
+
+.nav_link {
+    margin: 60px;
+}
+
+a {
+    position: relative;
+    letter-spacing: 0.5px;
+    font-size: 21.2px;
+    background-color: #ffffffb4;
+    padding: 0 10px;
+    border-radius: 10px;
+    transition: font-size 0.4s linear;
+}
+
+a:hover {
+    font-size: 28px;
+}
+
+a:hover:after {
+    width: 100%;
+    font-size: 32px;
+}
+
+a::before {
+    background: hsl(177, 100%, 50%);
+    content: "";
+    background-color: #ffffffb4;
+    position: absolute;
+    transform: scaleX(0);
+    transition: transform 0.5s ease-in-out;
+}
+
+a:hover::before {
+    transform: scaleX(1);
+}
+
+/*Календарь*/
+.start_calendar {
+    position: absolute;
+    left: 10vh;
+    height: 75vh;
+    color: #000000;
+    font-size: 20px;
+}
+
+.start_calendar .label-calendar {
+    background-color: #ffffffb4;
+    border-radius: 5px;
+}
+
+.start_calendar .start_calendar_date {
+    background-color: #ffffffb4;
+    color: #000000;
+    border-radius: 5px;
+    font-size: 18px;
+}
+
+::-webkit-calendar-picker-indicator {
+    background-color: #0d9f9c;
+    padding: 3px;
+    cursor: pointer;
+    border-radius: 2px;
+}
+
+.button {
+    appearance: none;
+    border: 0;
+    border-radius: 4px;
+    background: #ffffffb4;
+    color: #000000;
+    padding: 4px 4px;
+    font-size: 20px;
+    transition: font-size 0.4s linear;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.button:hover {
+    background: #3b9593b6;
+    font-size: 20px;
+    transition: font-size 0.4s linear;
+}
+
+.button:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px #3fa0a7;
+}
+
+/* Общие стили для контейнеров чекбоксов */
+.checkbox-all {
+    margin: 20px 0; /* Отступы между группами чекбоксов */
+    font-size: 20px; /* Размер шрифта */
+    color: #000000; /* Цвет текста */
+    font-family: 'Times New Roman', Times, serif; /* Шрифт */
+    display: flex;
+    position: fixed;
+    gap: 10px;
+    margin-right: 0px;
+    margin-top: 50px;
+}
+
+/* Заголовки для ПМК и фамилий */
+.checkbox-group h3 {
+    margin-right: 20px; /* Отступ между заголовком и чекбоксами */
+    color: #000000;
+}
+
+h4 {
+    margin: 5px 0; /* Отступы для заголовков фамилий */
+    color: #000000;
+}
+
+/* Стили для чекбоксов */
+.my-checkbox, .my-checkbox_1, .my-checkbox_2 {
+    -webkit-transform: scale(1.5); /* Увеличение размера чекбокса */
+    transform: scale(1.5);
+    cursor: pointer; /* Курсор при наведении */
+    margin-right: 10px; /* Отступ справа от чекбокса */
+}
+
+/* Стили для меток */
+label {
+    background-color: #ffffffb4; /* Фоновый цвет метки */
+    border: 2px solid transparent; /* Прозрачная рамка по умолчанию */
+    border-radius: 5px; /* Закругленные углы */
+    padding: 5px 5px; /* Отступы внутри метки */
+    transition: all 0.2s ease; /* Плавный переход для эффектов */
+    cursor: pointer; /* Курсор при наведении */
+    display: flex; /* Отображение меток в строку */
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+/* Эффект при наведении на метку */
+label:hover {
+    border: 2px solid #d50b0b; /* Цвет рамки при наведении */
+    background-color: #f0f0f0; /* Изменение фона при наведении */
+}
+
+.checkbox-item {
+    display: flex; /* Используем flexbox для выравнивания чекбоксов и меток */
+    align-items: center; /* Вертикальное выравнивание по центру */
+}
+
+.checkbox-item input[type="checkbox"] {
+    margin-right: 10px; /* Отступ справа от чекбокса */
+}
+
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    padding-top: 65px; /* Location of the box */
+    left: 10px;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow-x: auto;
+    overflow-y: scroll; /* Enable scroll if needed */
+    background-color: rgb(0, 0, 0); /* Fallback color */
+    background-color: rgba(0, 0, 0, 0.4); /* Black w/ opacity */
+}
+
+.modal-content {
+    position: relative;
+    background-color: #ffffffcd;
+    margin: auto;
+    padding: 0;
+    border: 5px solid #000000;
+    width: 94%;
+    height: 92%;
+    overflow-x: scroll;
+    white-space: nowrap;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    -webkit-animation-name: animatetop;
+    -webkit-animation-duration: 0.4s;
+    animation-name: animatetop;
+    animation-duration: 0.4s
+}
+
+@-webkit-keyframes animatetop {
+    from {
+        top: -900px;
+        opacity: 0
+    }
+    to {
+        top: 0;
+        pacity: 1
+    }
+}
+
+@keyframes animatetop {
+    from {
+        top: -900px;
+        opacity: 0
+    }
+    to {
+        top: 0;
+        opacity: 1
+    }
+}
+
+.close {
+    color: white;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.modal-header {
+    text-align: center;
+    width: 100%;
+    padding: 2px 16px;
+    background-color: #0d9f9c;
+    color: rgb(0, 0, 0);
+}
+
+.modal-body {
+    padding: 2px 16px;
+}
+
+/*стилт для таблицы*/
+table {
+    width: 450px;
+    border-top: 7px solid rgb(43, 129, 17);
+    border-collapse: collapse;
+    text-align: center;
+    margin-bottom: 20px;
+    border: 1px solid #dddddd;
+}
+
+td {
+    text-align: left;
+    padding: 10px;
+    border: 3px solid rgb(0, 0, 0);
+    cursor: pointer;
+}
+
+th {
+    text-align: center;
+    padding: 10px;
+    border: 3px solid rgb(0, 0, 0);
+}
+
+.modal2 {
+    display: none; /* Hidden by default */
+    position: absolute; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    padding-top: center;
+    background-position: center; /* Location of the box */
+    width: 60vh; /* Full width */
+    height: 70%; /* Full height */
+    overflow: hidden; /* Скрываем переполнение */
+}
+
+.modal-content2 {
+    position: relative;
+    background-color: #ffffff;
+    margin: auto;
+    padding: 0;
+    border: 5px solid #000000;
+    border-radius: 20px;
+    width: 100%;
+    height: 100%;
+    white-space: nowrap;
+    display: flex;
+    flex-direction: column; /* Устанавливаем вертикальное направление */
+}
+
+.modal-body {
+    flex: 1; /* Позволяет телу модального окна занимать оставшееся пространство */
+    padding: 20px; /* Отступы вокруг содержимого */
+}
+
+.modal-footer {
+    display: flex; /* Используем flexbox для выравнивания кнопок */
+    justify-content: space-between; /* Распределяем кнопки по краям */
+    padding: 5px; /* Отступы вокруг кнопок */
+    position: absolute; /* Фиксируем положение */
+    bottom: 0; /* Прикрепляем к нижней части модального окна */
+    left: 0; /* Прикрепляем к левому краю */
+    right: 0; /* Прикрепляем к правому краю */
+
+}
+
+.modal-header2 {
+    width: 100%;
+    padding: 2px 16px;
+    border-radius: 15px;
+    background-color: #0d9f9c;
+    color: rgb(0, 0, 0);
+}
+
+.close2 {
+    color: white;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close2:hover,
+.close2:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.nav_link_2 {
+    color: blueviolet;
+}
+
+/*.myInput {
+	width: 300px;
+	font-size: 13px;
+	padding: 6px 0 4px 10px;
+	border: 1px solid #cecece;
+	background: #F6F6f6;
+	border-radius: 8px;
+}*/
+select {
+    width: 100%;
+    font-size: 16px;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 4px;
+    background-color: #f1f1f1;
+    margin-top: 2%;
+    background-color: #9cd2d2;
+    cursor: pointer;
+}
+
+.select_choice label {
+    display: block;
+    margin-top: 10px;
+    padding-left: 10px;
+}
+
+.modal2 .input {
+    display: inline-block;
+    background: #eeeeee;
+    color: rgb(0, 0, 0);
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+    background-color: #9cd2d2;
+    padding: 14px 30px;
+    transition: all 0.9s;
+    border-radius: 10px;
+    margin-top: 32%;
+}
+
+.input:hover {
+    color: rgb(0, 0, 0);
+    background-color: #0d9f9c;
+    transition: background-color 0.5s ease;
+}
+
+.checkbox-group {
+    display: flex;
+    flex-wrap: wrap; /* Позволяет контейнерам оборачиваться */
+    gap: 20px; /* Отступ между колонками */
+}
+
+.checkbox-container {
+    display: flex;
+    flex-direction: column; /* Устанавливаем вертикальное направление */
+    flex: 1 1 100%; /* Устанавливаем ширину контейнера (20% для 5 колонок) */
+    max-height: 400px; /* Увеличиваем высоту контейнера */
+    max-width: 450px; /* Увеличиваем высоту контейнера */
+    overflow-y: auto; /* Добавляем прокрутку, если содержимое превышает высоту */
+    padding: 10px; /* Добавляем отступы внутри контейнера */
+    box-shadow: 020px 20px 60px rgb(111, 167, 209, 1);
+    /*box-shadow: 0 0 30px 20px rgba(111, 167, 209, 1);*/
+    border-radius: 20px;
+    transition: background-color 1s ease, box-shadow 1s ease; /* Переход для фона и тени */
+}
+
+.checkbox-container:hover {
+    box-shadow: 25px 25px 60px rgb(128, 200, 255, 1);
+    /*box-shadow: 0 0 50px 30px rgba(111, 167, 209, 1);*/
+}
+
+.checkbox-item {
+    display: flex; /* Используем flexbox для выравнивания чекбоксов и меток */
+    align-items: center; /* Вертикальное выравнивание по центру */
+    margin-bottom: 10px; /* Увеличиваем отступ между чекбоксами */
+}
+
+/* Увеличиваем размер чекбоксов */
+.my-checkbox, .my-checkbox_1, .my-checkbox_2 {
+    -webkit-transform: scale(1.5); /* Увеличение размера чекбокса */
+    transform: scale(1.5);
+    cursor: pointer; /* Курсор при наведении */
+    margin-right: 10px; /* Отступ справа от чекбокса */
+}
+
+.modal .input {
+    display: inline-block;
+    position: absolute;
+    background: #eeeeee;
+    color: rgb(0, 0, 0);
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+    background-color: #9cd2d2;
+    padding: 12px 30px;
+    transition: all 0.9s;
+    border-radius: 10px;
+    left: 1%;
+}
+
+.input:hover {
+    color: rgb(0, 0, 0);
+    background-color: #0d9f9c;
+    transition: background-color 0.5s ease;
+}
+
+@media print {
+    body {
+        overflow: hidden; /* Скрываем скролл для body */
+        font-family: 'Times New Roman', Times, sans-serif; /* Устанавливаем шрифт */
+        color: #000000; /* Цвет текста */
+        background-color: #fff; /* Белый фон */
+    }
+
+    body * {
+        visibility: hidden; /* Скрываем все элементы на странице */
+    }
+
+    .modal {
+        display: block; /* Убедитесь, что модальное окно отображается */
+        overflow: hidden; /* Скрываем скролл внутри модального окна */
+        padding: 20px; /* Добавляем отступы */
+    }
+
+    .modal-content, .modal-content * {
+        visibility: visible; /* Делаем видимыми элементы внутри модального окна */
+    }
+
+    #data-table {
+        visibility: visible; /* Делаем видимой только таблицу */
+        width: 100%; /* Устанавливаем ширину таблицы на 100% */
+        border-collapse: collapse; /* Убираем двойные границы */
+        margin-top: 20px; /* Отступ сверху */
+    }
+
+    #data-table th, #data-table td {
+        border: 1px solid #000000; /* Границы ячеек */
+        padding: 10px; /* Отступы внутри ячеек */
+        text-align: left; /* Выравнивание текста */
+    }
+
+    #data-table th {
+        background-color: #f2f2f2; /* Цвет фона заголовков */
+        font-weight: bold; /* Жирный шрифт для заголовков */
+    }
+
+    #data-table tr:nth-child(even) {
+        background-color: #f9f9f9; /* Цвет фона для четных строк */
+    }
+
+    #data-table tr:hover {
+        background-color: #e0e0e0; /* Цвет фона при наведении */
+    }
+
+    #print-it-out-button {
+        display: none !important; /* Скрываем кнопку печати */
+    }
+
+    h1, h2 {
+        text-align: center; /* Центрируем заголовки */
+        margin: 10px 0; /* Отступы для заголовков */
+    }
+
+    p {
+        text-align: center; /* Центрируем текст */
+        margin: 5px 0; /* Отступы для параграфов */
+    }
+}
+
+

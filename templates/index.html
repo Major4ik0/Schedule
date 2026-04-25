@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{{url_for('static', filename='css/style.css') }}">
+    <script src="{{url_for('static', filename='js/script.js') }}" defer></script>
+    <script src="{{url_for('static', filename='libs/rain.js') }}" defer></script>
+{% endblock %}
+
+
+{% block content %}
+<div class="hero-content">
+    <div class="title" id="title"><h1>СПО "Аргус"<span></span></h1></div>
+    <div class="hero-content__p"></div>
+
+    <div class="general-btn" id="generalBtn">
+        <button type="sumbit" class="authBtn" id="link-authBtnUser" onclick="enterAsUser()">Войти как пользователь</button>
+        <button type="sumbit" class="authBtn" id="link-authBtnPrepods">Войти как администатор</button>
+    </div>
+
+    <form class="login-form" id="loginForm">
+        <div class="container-form">
+            <div class="inputs">
+                <input type="text" placeholder="Логин" id="loginS" class="inputS" required/>
+                <input type="password" placeholder="Пароль" id="passwordS" class="inputS" required/>
+            </div>
+            <button type="sumbit" class="btn authBtn" id = "link-authBtn">Войти</button>
+        </div>
+    </form>
+
+    <button class="button-start" id = "link-button">Войти</button>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}{% endblock %}

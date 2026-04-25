@@ -1,0 +1,3492 @@
+/* ====== Тема (по умолчанию — светлая) ====== */
+:root {
+    --bg: #f6f8ff;
+    --card: #ffffff;
+    --surface: #eef2ff;
+    --border: #e5e7eb;
+    --text: #101623;
+    --muted: #6b7280;
+    --accent: #5b45ff;
+    --accent-2: #22c55e;
+    --danger: #ef4444;
+    --ring: rgba(91, 69, 255, .35)
+}
+
+/* ====== ОСНОВНЫЕ СТИЛИ ====== */
+* {
+    box-sizing: border-box
+}
+
+html, body {
+    height: 100%
+}
+
+body {
+    margin: 0;
+    font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Inter, Arial, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    background-image: radial-gradient(
+            60vw 60vw at -5% -10%, #e7e9ff 10%,
+            transparent 60%), radial-gradient(50vw 50vw at 120% -10%, #eafff3 10%,
+            transparent 60%
+    )
+}
+
+/* Тёмная тема */
+body.theme-dark {
+    --bg: #0b0d12;
+    --card: #121622;
+    --surface: #0f1420;
+    --border: #1f2937;
+    --text: #e5e7eb;
+    --muted: #9aa3b2;
+    --accent: #7c5cff;
+    --ring: rgba(124, 92, 255, .35);
+    background-image: radial-gradient(60vw 60vw at -5% -10%, rgba(124, 92, 255, .12) 10%, transparent 60%), radial-gradient(50vw 50vw at 120% -10%, rgba(34, 197, 94, .12) 10%, transparent 60%)
+}
+
+/* ====== КОНТЕЙНЕР И ОБЩИЕ КЛАССЫ ====== */
+
+.container {
+    /*max-width: 1200px;*/
+    margin: 10px 40px 10px 5px;
+    padding: 0 16px
+}
+
+/* Кнопки */
+.btn {
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    border-radius: 12px;
+    padding: 12px 14px
+}
+
+.btn.primary {
+    background: linear-gradient(180deg, var(--accent), #5b45ff);
+    border-color: transparent;
+    color: #fff;
+    font-weight: 600
+}
+
+.btn.ghost {
+    background: var(--surface)
+}
+
+.btn.sm {
+    padding: 8px 10px;
+    border-radius: 10px
+}
+
+/* Поля ввода */
+label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin: 0 0 6px
+}
+
+/* ====== ШАПКА С ЗАГОЛОВКОМ ====== */
+.hero {
+    background: linear-gradient(180deg, rgba(91, 69, 255, .08), rgba(91, 69, 255, 0)), linear-gradient(90deg, rgba(34, 197, 94, .08), rgba(34, 197, 94, 0));
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 22px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, .07)
+}
+
+.hero h1 {
+    margin: 0 0 6px;
+    font-size: clamp(20px, 4vw, 28px)
+}
+
+.hero p {
+    margin: 0;
+    color: var(--muted)
+}
+
+/* Информация администратора */
+.admin-info-line {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 20px;
+    background: rgba(91, 69, 255, 0.1);
+    border: 1px solid #5b45ff;
+    border-radius: 12px;
+    width: fit-content;
+}
+
+.mode-badge {
+    padding: 4px 12px;
+    background: rgba(91, 69, 255, 0.2);
+    border-radius: 6px;
+    color: #5b45ff;
+    font-weight: 500;
+}
+
+.nav-link {
+    color: #5b45ff;
+    text-decoration: none;
+    padding: 4px 0;
+    position: relative;
+}
+
+.nav-link:hover {
+    text-decoration: underline;
+}
+
+.separator {
+    width: 1px;
+    height: 20px;
+    background: rgba(91, 69, 255, 0.3);
+}
+
+.page-header {
+    font-weight: 600;
+    font-size: 18px;
+    color: #333;
+}
+
+.admin-info {
+    display: flex;
+    width: 430px;
+    align-items: center;
+    gap: 16px;
+    margin-top: 12px;
+    padding: 10px 16px;
+    background: rgba(91, 69, 255, 0.1);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+}
+
+.admin-badge {
+    background: var(--accent);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    width: 250px;
+}
+
+.back-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 14px;
+    transition: opacity 0.2s ease;
+}
+
+.back-link:hover {
+    opacity: 0.8;
+    text-decoration: underline;
+}
+
+/* ====== ПАНЕЛЬ УПРАВЛЕНИЯ ====== */
+/* Равное распределение по 3 колонкам */
+.controls {
+    display: grid;
+    gap: 16px;
+    /*grid-template-columns: repeat(3, 1fr); !* Три равные колонки *!*/
+    align-items: end;
+    margin: 18px 0 18px;
+    grid-template-columns: 2fr 1fr auto;
+}
+
+/* Центрируем выбор месяца внутри своей ячейки */
+.controls > div:nth-child(2) {
+    display: flex;
+    justify-content: center;
+}
+
+.month-selector-container {
+    width: 100%;
+}
+
+.combined-date-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 8px 12px;
+    /* Убираем фиксированную ширину */
+    max-width: 400px;
+    width: 100%;
+}
+
+/* Кнопки справа выравниваем по правому краю */
+.actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+@media (max-width: 900px) {
+    .controls {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .controls .actions {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+    }
+
+    .controls > div:nth-child(2) {
+        justify-content: flex-start;
+    }
+}
+
+
+/* ====== УЛУЧШЕННЫЙ СЕЛЕКТОР ДАТЫ ====== */
+
+.date-nav {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: all 0.2s ease;
+}
+
+.date-nav:hover {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.date-display-select {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.date-display {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.date-selectors {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+}
+
+.select-group {
+    position: relative;
+    flex: 1;
+}
+
+.date-select {
+    width: 100%;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 6px 24px 6px 10px;
+    font-size: 13px;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    text-align: center;
+}
+
+.date-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--ring);
+}
+
+/* Стрелка для селекта */
+.select-group::after {
+    content: "▼";
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: var(--muted);
+    pointer-events: none;
+}
+
+.month-select {
+    min-width: 100px;
+}
+
+.year-select {
+    min-width: 80px;
+}
+
+.today-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.today-btn:hover {
+    background: var(--accent-2);
+    color: white;
+    border-color: var(--accent-2);
+}
+
+/* Для мобильных устройств */
+@media (max-width: 768px) {
+    .combined-date-selector {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .date-nav {
+        order: 1;
+    }
+
+    .date-display-select {
+        order: 3;
+        width: 100%;
+        margin-top: 8px;
+    }
+
+    .today-btn {
+        order: 2;
+    }
+}
+
+/* Кнопки действий */
+/*.actions {*/
+/*    display: flex;*/
+/*    gap: 10px*/
+/*}*/
+
+/* ====== ВЫБОР ПРЕПОДАВАТЕЛЕЙ (МУЛЬТИСЕЛЕКТ) ====== */
+.ms {
+    position: relative
+}
+
+.ms > button {
+    width: 100%;
+    text-align: left
+}
+
+.ms-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px
+}
+
+.ms-trigger .badge {
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--surface);
+    padding: 2px 8px;
+    border-radius: 8px;
+    margin-left: 8px;
+}
+
+.ms-trigger .badge.all {
+    background: var(--accent);
+    color: white;
+}
+
+.ms-trigger .badge.some {
+    background: var(--accent-2);
+    color: white;
+}
+
+.ms-trigger .badge.none {
+    background: var(--surface);
+    color: var(--muted);
+}
+
+.ms-panel {
+    position: absolute;
+    z-index: 999;
+    inset: auto 0 0 0;
+    transform: translateY(calc(100% + 8px));
+    border: 1px solid var(--border);
+    background: var(--card);
+    border-radius: 14px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, .12);
+    padding: 10px;
+    display: none
+}
+
+.ms.open .ms-panel {
+    display: block
+}
+
+/* Категории преподавателей */
+.ms-categories {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+}
+
+.ms-category {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ms-category:hover {
+    border-color: var(--accent);
+    background: var(--card);
+}
+
+.ms-category.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.category-count {
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+.ms-category.active .category-count {
+    opacity: 0.9;
+}
+
+.ms-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.ms-actions input[type="search"] {
+    flex: 1;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 8px 10px;
+    min-width: 150px;
+}
+
+.ms-actions .mini {
+    padding: 8px 10px;
+    border-radius: 10px;
+    white-space: nowrap;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 12px;
+}
+
+.ms-actions .mini:hover {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.ms-list-container {
+    max-height: 220px;
+    overflow: auto;
+}
+
+.ms-list {
+    display: grid;
+    gap: 6px;
+}
+
+.ms-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.ms-item:hover {
+    border-color: var(--accent);
+    background: var(--card);
+}
+
+.ms-item.selected {
+    background: rgba(91, 69, 255, 0.15);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+}
+
+.ms-item .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    transform: scale(1.3);
+}
+
+.ms-item input[type="checkbox"] {
+    margin: 0;
+}
+
+/* ====== ТАБЛИЦЫ РАСПИСАНИЯ ====== */
+
+/* Контейнер таблицы */
+.table-wrap {
+    position: static;
+    z-index: 25;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: auto;
+    cursor: default;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, .08);
+    margin-bottom: 28px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) transparent;
+    max-height: 70vh;
+}
+
+.table-wrap.grabbing {
+    cursor: grabbing;
+    user-select: none;
+    -webkit-user-select: none
+}
+
+.table-wrap:active {
+    cursor: grabbing;
+}
+
+/* Заголовок таблицы с днями */
+thead {
+    position: sticky;
+    top: 0;
+    background: var(--card);
+    z-index: 30;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Заголовок "часы занятий" в шапке */
+thead th.col-pair {
+    position: sticky;
+    left: 0;
+    top: 0;
+    background: var(--card);
+    z-index: 35;
+    box-shadow: 2px 0 0 var(--border), 0 1px 0 var(--border);
+}
+
+/* Название преподавателя в одиночной таблице */
+.teacher-title {
+    position: sticky;
+    left: 10px;
+    background: var(--card);
+    z-index: 35;
+    padding: 12px;
+    margin: 0;
+    border-bottom: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+}
+
+/* Название преподавателя в комбинированной таблице */
+.section-head {
+    position: sticky;
+    top: 49px;
+    background: var(--card) !important;
+    z-index: 35;
+    padding: 12px;
+    border-bottom: 2px solid var(--border);
+}
+
+/* Заголовки строк (Пара 1, Пара 2...) */
+.row-head {
+    position: sticky;
+    left: 0;
+    background: var(--card);
+    z-index: 20;
+    box-shadow: 2px 0 0 var(--border);
+    min-width: 120px;
+}
+
+/* Основная таблица */
+table {
+    width: max(100%, 900px);
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+th, td {
+    border: 1px solid var(--border);
+    padding: 12px;
+    white-space: nowrap;
+    background: var(--card);
+}
+
+/* Стили для дней */
+.day-th.weekend {
+    color: var(--danger)
+}
+
+.day-th.today {
+    outline: 2px dashed var(--accent);
+    outline-offset: -2px;
+    border-radius: 8px
+}
+
+/* Блоки с парами */
+.pair {
+    display: grid;
+    gap: 4px
+}
+
+.pair .line {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    border-radius: 10px;
+    padding: 6px 10px;
+    font-size: 10px;
+    line-height: 1.2
+}
+.ch {
+   font-size: 12px;
+}
+
+.section-head .chip {
+    position: sticky;
+    left: 10px;
+
+}
+
+.chip .dot {
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    opacity: .9
+}
+
+.chip.muted {
+    color: var(--muted);
+    background: var(--surface)
+}
+
+.chip.green .dot {
+    background: var(--accent-2)
+}
+
+/* Режим редактирования */
+.editable {
+    position: relative
+}
+
+body.admin-on .editable {
+    cursor: pointer
+}
+
+.editable::after {
+    content: "✎";
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    font-size: 11px;
+    opacity: 0;
+    transition: opacity .15s ease
+}
+
+body.admin-on .editable:hover::after {
+    opacity: .45
+}
+
+/* ====== БОКОВАЯ ПАНЕЛЬ ПРЕПОДАВАТЕЛЕЙ ====== */
+.rail {
+    position: fixed;
+    right: 12px;
+    top: 300px;
+    bottom: 20px;
+    width: 220px;
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, .7);
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden; /* Изменено с overflow: auto */
+    z-index: 35;
+    transition: width 0.3s ease;
+}
+
+body.theme-dark .rail {
+    background: rgba(17, 24, 39, .6)
+}
+
+/* Шапка панели - фиксированная сверху */
+.rail-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0; /* Запрещаем сжатие */
+    z-index: 2; /* Поверх контента */
+}
+
+.rail-title {
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rail-toggle {
+    border: 1px solid var(--border);
+    background: var(--card);
+    border-radius: 10px;
+    padding: 6px 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.rail-toggle:hover {
+    background: var(--surface);
+    transform: scale(1.1);
+}
+
+/* Иконка для развернутого состояния */
+.rail:not(.collapsed) .rail-toggle::after {
+    content: "⟨";
+    font-size: 16px;
+}
+
+/* Иконка для свернутого состояния */
+.rail.collapsed .rail-toggle::after {
+    content: "⟩";
+    font-size: 16px;
+}
+
+/* Тело панели - прокручивается */
+.rail-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    overflow-y: auto; /* Прокрутка только здесь */
+    flex: 1; /* Занимает все доступное пространство */
+    transition: opacity 0.3s ease;
+}
+
+.rail input {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 8px 10px;
+    width: 100%;
+}
+
+/* Категории в боковой панели */
+.rail-category {
+    margin-bottom: 8px;
+}
+
+.rail-category-title {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 4px;
+    padding: 8px;
+    background: var(--surface);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.rail-category-title:hover {
+    background: var(--card);
+    border-color: var(--accent);
+}
+
+.rail-category-title.expanded {
+    background: var(--accent);
+    color: white;
+}
+
+.rail-category-title.collapsed {
+    background: var(--surface);
+}
+
+.rail-category-arrow {
+    font-size: 10px;
+    width: 12px;
+    text-align: center;
+}
+
+.rail-category-count {
+    font-size: 10px;
+    opacity: 0.7;
+    margin-left: auto;
+}
+
+.rail-category-title.expanded .rail-category-count {
+    opacity: 0.9;
+}
+
+.rail-category-content {
+    padding-left: 8px;
+}
+
+.rail-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    border-radius: 8px;
+    cursor: pointer;
+    margin-bottom: 2px;
+    transition: all 0.2s ease;
+}
+
+.rail-item:hover {
+    border-color: var(--accent);
+    background: var(--surface);
+    transform: translateX(2px);
+}
+
+.rail-item .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+}
+
+.rail-item-name {
+    font-size: 13px;
+    flex: 1;
+}
+
+/* Свернутое состояние */
+.rail.collapsed {
+    width: 44px;
+    overflow: hidden;
+}
+
+.rail.collapsed .rail-head {
+    padding: 8px;
+    border-bottom: none;
+    justify-content: center;
+}
+
+.rail.collapsed .rail-title {
+    display: none;
+}
+
+.rail.collapsed .rail-body {
+    display: none;
+}
+
+.rail.collapsed .rail-toggle {
+    position: static;
+}
+
+@media (max-width: 1280px) {
+    .rail {
+        display: none
+    }
+}
+
+/* ====== МОДАЛЬНЫЕ ОКНА ====== */
+.modal {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, .35);
+    padding: 20px;
+    z-index: 1000;
+    backdrop-filter: blur(6px);
+}
+
+.modal[aria-hidden="true"] {
+    display: none
+}
+
+.modal-card {
+    width: min(720px, 100%);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.25);
+}
+
+.modal-card h3 {
+    margin-top: 0
+}
+
+/* ====== ВСПОМОГАТЕЛЬНЫЕ ЭЛЕМЕНТЫ ====== */
+.note {
+    color: var(--muted);
+    font-size: 12px
+}
+
+.error {
+    color: #dc2626;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin: 1rem 0;
+}
+
+.note {
+    color: var(--muted);
+    font-size: 12px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    /*margin: 1rem 0;*/
+}
+
+/* Стили для селектора категорий */
+.category-selector {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 12px;
+}
+
+.category-selector label {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 16px;
+    cursor: pointer;
+}
+
+.category-selector input[type="radio"] {
+    margin-right: 6px;
+}
+
+/* Стили для скроллбара таблицы */
+.table-wrap::-webkit-scrollbar {
+    height: 10px
+}
+
+.table-wrap::-webkit-scrollbar-track {
+    background: transparent
+}
+
+.table-wrap::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    border-radius: 999px
+}
+
+/* Градиенты по краям при скролле */
+.table-wrap::before, .table-wrap::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 14px;
+    width: 28px;
+    pointer-events: none;
+    opacity: .55;
+    display: none
+}
+
+.table-wrap::before {
+    left: 0;
+    background: linear-gradient(90deg, var(--bg), rgba(0, 0, 0, 0))
+}
+
+.table-wrap::after {
+    right: 0;
+    background: linear-gradient(-90deg, var(--bg), rgba(0, 0, 0, 0))
+}
+
+.table-wrap.shadow-left::before {
+    display: block
+}
+
+.table-wrap.shadow-right::after {
+    display: block
+}
+
+/* Стили для печати */
+/* ====== СТИЛИ ДЛЯ ПЕЧАТИ ====== */
+@media print {
+    /* Скрываем ненужные элементы */
+    .hero,
+    .ms-panel,
+    .editable::after,
+    .actions,
+    .rail,
+    .modal,
+    .global-nav,
+    .mini-help,
+    .admin-info-line,
+    .admin-info,
+    .user-info,
+    .admin-badge,
+    .back-link,
+    .ms-trigger,
+    .ms-categories,
+    .ms-actions,
+    .note,
+    .swap-mode-indicator,
+    .swap-selected,
+    .btn.export,
+    .switch-mode-btn,
+    .workload-btn,
+    .modal-actions,
+    .notification {
+        display: none !important;
+    }
+
+    /* Основные стили для печати */
+    body {
+        margin: 0;
+        padding: 0;
+        font-size: 11pt;
+        background: white !important;
+        color: black !important;
+    }
+
+    .container {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+
+    /* Убираем фоновые градиенты и тени */
+    body,
+    .table-wrap,
+    table,
+    th,
+    td {
+        background: white !important;
+        color: black !important;
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+    }
+
+    /* Улучшаем отображение таблиц */
+    .table-wrap {
+        max-height: none !important;
+        height: auto !important;
+        overflow: visible !important;
+        border: none !important;
+        box-shadow: none !important;
+        margin-bottom: 20px !important;
+        page-break-inside: avoid;
+    }
+
+    table {
+        width: 100% !important;
+        max-width: 100% !important;
+        border-collapse: collapse;
+        font-size: 10pt;
+    }
+
+    th, td {
+        padding: 6px 8px !important;
+        border: 1px solid #999 !important;
+        background: white !important;
+        color: black !important;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    /* Заголовки таблиц */
+    thead th {
+        background: #f0f0f0 !important;
+        font-weight: bold;
+        position: static !important;
+        box-shadow: none !important;
+    }
+
+    /* Заголовок "часы занятий" */
+    .col-pair {
+        background: #f0f0f0 !important;
+        font-weight: bold;
+        width: 80px !important;
+        min-width: 80px !important;
+        position: static !important;
+    }
+
+    /* Названия преподавателей */
+    .teacher-title,
+    .section-head {
+        background: #e0e0e0 !important;
+        font-weight: bold;
+        font-size: 12pt;
+        padding: 8px 12px !important;
+        border: 1px solid #999 !important;
+        position: static !important;
+        box-shadow: none !important;
+        margin-bottom: 0 !important;
+    }
+
+    .teacher-title .dot,
+    .section-head .dot {
+        display: none;
+    }
+
+    /* Стили для пар */
+    .pair {
+        display: block !important;
+        text-align: left;
+    }
+
+    .pair .line {
+        display: block !important;
+        margin-bottom: 4px;
+    }
+
+    .chip {
+        display: inline-block !important;
+        border: 1px solid #999 !important;
+        background: white !important;
+        color: black !important;
+        padding: 3px 6px !important;
+        margin: 1px 3px 1px 0 !important;
+        font-size: 9pt;
+        border-radius: 3px !important;
+    }
+
+    .chip .dot {
+        display: none !important;
+    }
+
+    /* Убираем скроллбары */
+    .table-wrap::-webkit-scrollbar,
+    #swapTeachersList::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    /* Скрываем декоративные элементы */
+    .table-wrap::before,
+    .table-wrap::after,
+    .shadow-left,
+    .shadow-right {
+        display: none !important;
+    }
+
+    /* Улучшаем отображение выходных */
+    .weekend {
+        background: #f9f9f9 !important;
+        font-weight: bold;
+    }
+
+    .today {
+        outline: none !important;
+        background: #fffacd !important;
+    }
+
+    /* Улучшаем отображение цветных точек */
+    .dot {
+        display: inline-block;
+        width: 8px !important;
+        height: 8px !important;
+        border-radius: 50% !important;
+        margin-right: 4px !important;
+        background: gray !important; /* Для печати используем серый */
+    }
+
+    /* Разбивка на страницы */
+    .table-wrap {
+        page-break-inside: avoid;
+    }
+
+    h1, h2, h3, h4 {
+        page-break-after: avoid;
+    }
+
+    table, img, svg {
+        page-break-inside: avoid;
+    }
+
+    /* Информация о печати */
+    .print-header {
+        display: block !important;
+        text-align: center;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #000;
+    }
+
+    .print-header h1 {
+        margin: 0 0 5px 0;
+        font-size: 16pt;
+    }
+
+    .print-date {
+        font-size: 11pt;
+        color: #666;
+    }
+
+    /* Номера страниц */
+    @page {
+        margin: 1.5cm;
+        size: A4 landscape;
+    }
+
+    @page :first {
+        margin-top: 2cm;
+    }
+
+    /* Добавляем информацию о расписании */
+    .print-info {
+        display: block !important;
+        margin: 10px 0 20px 0;
+        padding: 10px;
+        background: #f9f9f9;
+        border: 1px solid #ddd;
+        font-size: 10pt;
+    }
+
+    /* Скрываем воскресенье для лучшей печати */
+    .isSundayTrue {
+        background: #f5f5f5 !important;
+    }
+
+    /* Убираем все анимации и переходы */
+    * {
+        transition: none !important;
+        animation: none !important;
+    }
+
+    /* Улучшаем читаемость текста */
+    .pair .chip {
+        display: block !important;
+        margin: 2px 0 !important;
+        padding: 4px !important;
+        border: 1px solid #ddd !important;
+    }
+
+    /* Компактное отображение для печати */
+    .chip.green,
+    .chip.muted {
+        background: #f9f9f9 !important;
+        color: #333 !important;
+    }
+
+    /* Скрываем поиск и фильтры */
+    input,
+    select,
+    button:not(.print-only) {
+        display: none !important;
+    }
+
+    /* Показываем только необходимые кнопки */
+    .btn.print-only {
+        display: block !important;
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 10000;
+    }
+
+    /* Добавляем водяной знак */
+    body::after {
+        content: "Расписание преподавателей - Печать от " attr(data-print-date);
+        position: fixed;
+        bottom: 10px;
+        right: 10px;
+        font-size: 8pt;
+        color: rgba(0, 0, 0, 0.3);
+    }
+
+    /* Улучшаем отображение в комбинированном режиме */
+    .section-head {
+        position: static !important;
+        top: auto !important;
+        z-index: auto !important;
+    }
+
+    .row-head {
+        position: static !important;
+        left: auto !important;
+        z-index: auto !important;
+        background: #f0f0f0 !important;
+        font-weight: bold;
+    }
+
+    /* Оптимизация для экономии чернил */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* Убираем лишние отступы */
+    .table-wrap {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    table {
+        border-spacing: 0 !important;
+    }
+
+    /* Подготавливаем для двухсторонней печати */
+    @page :left {
+        margin-left: 2cm;
+        margin-right: 1.5cm;
+    }
+
+    @page :right {
+        margin-left: 1.5cm;
+        margin-right: 2cm;
+    }
+}
+
+/* Кнопка для печати - показывается только при печати */
+@media screen {
+    .print-only {
+        display: none !important;
+    }
+}
+
+/* Дополнительные улучшения для печати */
+.print-optimize {
+    -webkit-print-color-adjust: economy;
+    print-color-adjust: economy;
+}
+
+/* Стили для темной темы при печати */
+@media print and (prefers-color-scheme: dark) {
+    body,
+    .table-wrap,
+    table,
+    th,
+    td {
+        background: white !important;
+        color: black !important;
+        border-color: #333 !important;
+    }
+
+    thead th,
+    .col-pair,
+    .row-head {
+        background: #e0e0e0 !important;
+    }
+
+    .teacher-title,
+    .section-head {
+        background: #d0d0d0 !important;
+    }
+
+    .weekend {
+        background: #f8f8f8 !important;
+    }
+
+    .today {
+        background: #fff8dc !important;
+    }
+}
+
+/* Поддержка различных размеров бумаги */
+@page A4 {
+    size: 210mm 297mm;
+}
+
+@page A4-landscape {
+    size: 297mm 210mm;
+}
+
+@page letter {
+    size: 8.5in 11in;
+}
+
+@page letter-landscape {
+    size: 11in 8.5in;
+}
+
+/* Оптимизация для браузера Chrome */
+@media print and (-webkit-min-device-pixel-ratio: 0) {
+    .table-wrap {
+        -webkit-print-color-adjust: exact;
+    }
+}
+
+
+.isSundayTrue {
+    background: #babec1;
+}
+
+
+/* Заменить все стили модального окна на следующие: */
+
+/* Базовые стили модального окна */
+.modal {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, .35);
+    padding: 20px;
+    z-index: 1000;
+    overflow-y: auto; /* Добавляем прокрутку если контент не помещается */
+}
+
+.modal[aria-hidden="true"] {
+    display: none;
+}
+
+.modal-card {
+    width: min(600px, 90vw); /* Уменьшил максимальную ширину */
+    max-height: 90vh; /* Ограничиваем высоту */
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .15);
+    overflow-y: auto; /* Внутренняя прокрутка */
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-card h3 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    font-size: 18px;
+    line-height: 1.3;
+}
+
+/* Стили для окна замены */
+.swap-modal-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(2, 1fr);
+    margin-bottom: 16px;
+    flex: 1; /* Занимает доступное пространство */
+    min-height: 0; /* Для корректного flex */
+}
+
+.swap-field {
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 10px 12px;
+    width: 100%;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.swap-field:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--ring);
+}
+
+.swap-field:disabled {
+    background: var(--surface);
+    color: var(--muted);
+    cursor: not-allowed;
+}
+
+.swap-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.swap-field-group label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 0;
+}
+
+/* Контейнер для скролла преподавателей */
+#swapTeachersList {
+    max-height: 150px; /* Уменьшил высоту */
+    min-height: 100px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--card);
+    padding: 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) transparent;
+}
+
+#swapTeachersList::-webkit-scrollbar {
+    width: 6px;
+}
+
+#swapTeachersList::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 3px;
+}
+
+#swapTeachersList::-webkit-scrollbar-thumb {
+    background: var(--accent);
+    border-radius: 3px;
+}
+
+.swap-info-box {
+    background: rgba(91, 69, 255, 0.05);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 12px;
+    margin: 12px 0;
+    grid-column: 1 / -1;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.swap-info-box p {
+    margin: 0;
+}
+
+/* Категории преподавателей */
+.teacher-category-group {
+    grid-column: 1 / -1;
+}
+
+.teacher-categories {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+}
+
+.teacher-category-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--text);
+    white-space: nowrap;
+}
+
+.teacher-category-btn:hover {
+    border-color: var(--accent);
+    background: var(--card);
+}
+
+.teacher-category-btn.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+/* Выбор даты и пары */
+.datetime-selection {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.date-input-wrapper {
+    position: relative;
+    flex: 1;
+    min-width: 150px;
+}
+
+.date-input-wrapper input {
+    width: 100%;
+    cursor: pointer;
+}
+
+.date-picker-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    pointer-events: none;
+}
+
+.pair-selection {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.pair-option {
+    padding: 10px 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--text);
+    text-align: center;
+    min-width: 0;
+}
+
+.pair-option:hover {
+    border-color: var(--accent);
+    background: var(--card);
+}
+
+.pair-option.selected {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.pair-time {
+    display: block;
+    font-size: 11px;
+    color: inherit;
+    opacity: 0.9;
+    margin-top: 4px;
+}
+
+/* Текущая пара для замены */
+.current-pair-info {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 16px;
+    max-height: 120px; /* Ограничиваем высоту */
+    overflow-y: auto;
+}
+
+.current-pair-info h4 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.current-pair-details {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.current-pair-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.current-pair-label {
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.current-pair-value {
+    font-size: 12px;
+    color: var(--text);
+    font-weight: 500;
+    word-break: break-word;
+}
+
+/* Опции преподавателей */
+.teacher-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 44px; /* Минимальная высота для touch */
+}
+
+.teacher-option:last-child {
+    border-bottom: none;
+}
+
+.teacher-option:hover {
+    background: var(--surface);
+}
+
+.teacher-option.selected {
+    background: rgba(91, 69, 255, 0.1);
+    border-left: 3px solid var(--accent);
+}
+
+.teacher-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+}
+
+.teacher-name {
+    flex: 1;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.teacher-category {
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface);
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Поиск преподавателя */
+#swapTeacherSearch {
+    margin-bottom: 12px;
+}
+
+/* Кнопки действий */
+.modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0; /* Фиксируем размер */
+}
+
+/* Адаптивность для мобильных */
+@media (max-width: 768px) {
+    .modal {
+        padding: 10px; /* Меньше отступы на мобильных */
+        align-items: flex-start; /* Выравниваем по верху на мобильных */
+        padding-top: 20px;
+    }
+
+    .modal-card {
+        width: 95vw; /* Почти на всю ширину */
+        max-height: 85vh; /* Меньше высота */
+        padding: 16px;
+    }
+
+    .swap-modal-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .datetime-selection {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .date-input-wrapper {
+        width: 100%;
+    }
+
+    .pair-selection {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+
+    .pair-option {
+        padding: 8px 4px;
+        font-size: 12px;
+    }
+
+    .pair-time {
+        font-size: 10px;
+    }
+
+    .current-pair-details {
+        grid-template-columns: 1fr;
+    }
+
+    .teacher-categories {
+        justify-content: center;
+    }
+
+    .teacher-category-btn {
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+
+    .teacher-option {
+        padding: 8px 10px;
+        min-height: 40px;
+    }
+
+    .teacher-name {
+        font-size: 13px;
+    }
+
+    #swapTeachersList {
+        max-height: 120px;
+        min-height: 80px;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-card {
+        width: 98vw;
+        max-height: 90vh;
+        padding: 12px;
+    }
+
+    .modal-card h3 {
+        font-size: 16px;
+        margin-bottom: 12px;
+    }
+
+    .swap-field {
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+
+    .pair-selection {
+        grid-template-columns: 1fr;
+    }
+
+    .pair-option {
+        padding: 10px 8px;
+    }
+
+    .modal-actions {
+        flex-direction: column-reverse;
+    }
+
+    .modal-actions .btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* Фикс для очень высоких экранов */
+@media (min-height: 900px) {
+    #swapTeachersList {
+        max-height: 200px;
+    }
+
+    .current-pair-info {
+        max-height: 150px;
+    }
+}
+
+/* Фикс для очень маленьких экранов */
+@media (max-height: 600px) {
+    .modal-card {
+        max-height: 85vh;
+    }
+
+    .swap-modal-grid {
+        gap: 10px;
+    }
+
+    .current-pair-info {
+        max-height: 80px;
+        padding: 8px;
+        margin-bottom: 12px;
+    }
+
+    #swapTeachersList {
+        max-height: 100px;
+        min-height: 80px;
+    }
+}
+
+/* Общий контейнер для всего блока */
+.admin-workload-container {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+/* Стили для строки с информацией о режиме (ваш 3 вариант) */
+.admin-info-line {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 16px;
+    background: rgba(91, 69, 255, 0.1);
+    border: 1px solid var(--accent, #5b45ff);
+    border-radius: 12px;
+    height: fit-content;
+}
+
+.mode-badge {
+    padding: 4px 12px;
+    background: rgba(91, 69, 255, 0.2);
+    border-radius: 6px;
+    color: #5b45ff;
+    font-weight: 500;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.separator {
+    width: 1px;
+    height: 20px;
+    background: rgba(91, 69, 255, 0.3);
+}
+
+.nav-link {
+    color: #5b45ff;
+    text-decoration: none;
+    padding: 4px 0;
+    position: relative;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.nav-link:hover {
+    text-decoration: underline;
+}
+
+/* Кнопка "Нагрузка преподавателей" */
+.workload-btn {
+    padding: 10px 20px;
+    background: var(--accent, #5b45ff);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    height: fit-content;
+}
+
+.workload-btn:hover {
+    background: #4a35e0;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(91, 69, 255, 0.2);
+}
+
+/* Для мобильной адаптации */
+@media (max-width: 768px) {
+    .admin-workload-container {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .admin-info-line {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .workload-btn {
+        width: 100%;
+    }
+}
+
+.teacher-option.current-teacher {
+    background-color: rgba(59, 130, 246, 0.1);
+    border-left: 3px solid #3b82f6;
+}
+
+.teacher-option.current-teacher .teacher-name {
+    font-weight: 600;
+}
+
+.ms-panel .note {
+    display: flex;
+    justify-content: flex-end; /* Выравниваем содержимое по правому краю */
+    align-items: center;
+    margin-top: 6px;
+    gap: 10px; /* Расстояние между текстом и кнопкой */
+}
+
+.ms-panel .note #build_1 {
+    margin-left: auto; /* Кнопка будет прижата вправо */
+}
+
+/* Панель рекомендаций */
+.recommendations-panel {
+    position: fixed;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%);
+    width: 320px;
+    max-height: 500px;
+    background: var(--card-bg, white);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border, #e5e7eb);
+    z-index: 1001;
+    display: none;
+    overflow: hidden;
+    animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translate(30px, -50%);
+    }
+    to {
+        opacity: 1;
+        transform: translate(0, -50%);
+    }
+}
+
+.recommendations-panel.open {
+    display: block;
+}
+
+.recommendations-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: linear-gradient(135deg, #7c5cff, #6b4ecc);
+    color: white;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.recommendations-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.recommendations-icon {
+    font-size: 18px;
+}
+
+.recommendations-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.recommendations-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+.recommendations-content {
+    padding: 15px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Элемент рекомендации */
+.rec-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+    background: var(--surface-light, #f9fafb);
+    position: relative;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.rec-item:hover {
+    background: white;
+    border-color: #7c5cff;
+    transform: translateX(4px);
+    box-shadow: 0 4px 8px rgba(124, 92, 255, 0.15);
+}
+
+.rec-item.experienced {
+    background: rgba(34, 197, 94, 0.05);
+    border-left: 3px solid #22c55e;
+}
+
+.rec-item.experienced:hover {
+    background: rgba(34, 197, 94, 0.1);
+}
+
+.rec-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7c5cff, #6b4ecc);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 16px;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.rec-info {
+    flex: 1;
+}
+
+.rec-name {
+    font-weight: 500;
+    font-size: 14px;
+    margin-bottom: 4px;
+    color: var(--text-primary, #111827);
+}
+
+.rec-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+}
+
+.rec-degree {
+    background: rgba(124, 92, 255, 0.1);
+    color: #7c5cff;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.rec-pmk {
+    background: var(--surface, #f3f4f6);
+    color: var(--text-secondary, #6b7280);
+    padding: 2px 6px;
+    border-radius: 12px;
+}
+
+.rec-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-weight: 500;
+    margin-left: 8px;
+    white-space: nowrap;
+}
+
+.rec-badge.experience {
+    background: #22c55e;
+    color: white;
+}
+
+.rec-badge.rank-high {
+    background: #f59e0b;
+    color: white;
+}
+
+.rec-badge.recommended {
+    background: #7c5cff;
+    color: white;
+}
+
+.rec-arrow {
+    color: #9ca3af;
+    font-size: 16px;
+    margin-left: 8px;
+    opacity: 0;
+    transition: all 0.2s;
+}
+
+.rec-item:hover .rec-arrow {
+    opacity: 1;
+    transform: translateX(4px);
+    color: #7c5cff;
+}
+
+/* Загрузчик */
+.recommendations-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    color: var(--text-secondary, #6b7280);
+    font-size: 13px;
+    gap: 15px;
+}
+
+.spinner {
+    width: 30px;
+    height: 30px;
+    border: 3px solid rgba(124, 92, 255, 0.2);
+    border-top-color: #7c5cff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Пустое состояние */
+.recommendations-empty {
+    text-align: center;
+    padding: 30px;
+}
+
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+.empty-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary, #111827);
+    margin-bottom: 5px;
+}
+
+.empty-hint {
+    font-size: 12px;
+    color: var(--text-secondary, #6b7280);
+}
+
+/* Заметка */
+.recommendations-note {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #fef3c7;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #92400e;
+    border-left: 3px solid #f59e0b;
+}
+
+/* Бейдж на кнопке */
+#recBadge {
+    background: #ef4444;
+    color: white;
+    margin-left: 4px;
+}
+
+/* Модальное окно редактора */
+.editor-modal {
+    max-width: 600px !important;
+    width: 90%;
+    padding: 0 !important;
+    overflow: hidden;
+    border-radius: 16px !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Заголовок */
+.editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, #7c5cff, #6b4ecc);
+    color: white;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.editor-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 500;
+    color: white;
+}
+
+.editor-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.editor-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+/* Тело */
+.editor-body {
+    padding: 24px;
+    background: var(--card-bg, #ffffff);
+}
+
+/* Информация о паре */
+.pair-info {
+    background: linear-gradient(135deg, #f8f9ff, #f0f2ff);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 24px;
+    border-left: 4px solid #7c5cff;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.pair-info-icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(124, 92, 255, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #7c5cff;
+}
+
+.pair-info-content {
+    flex: 1;
+}
+
+.pair-info-title {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 4px;
+}
+
+.pair-info-value {
+    font-weight: 600;
+    font-size: 16px;
+    color: #111827;
+}
+
+.pair-info-badge {
+    background: rgba(124, 92, 255, 0.1);
+    color: #7c5cff;
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* Форма */
+.editor-form {
+    width: 100%;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.form-group {
+    margin-bottom: 0;
+}
+
+.form-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.label-icon {
+    font-size: 16px;
+}
+
+/* Кастомный селект */
+.select-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.editor-select {
+    width: 100%;
+    height: 44px;
+    padding: 0 16px;
+    padding-right: 40px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #111827;
+    appearance: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.editor-select:hover {
+    background: white;
+    border-color: #7c5cff;
+}
+
+.editor-select:focus {
+    outline: none;
+    border-color: #7c5cff;
+    box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.1);
+    background: white;
+}
+
+.select-arrow {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    font-size: 12px;
+    pointer-events: none;
+    transition: color 0.2s;
+}
+
+.editor-select:hover + .select-arrow {
+    color: #7c5cff;
+}
+
+/* Футер */
+.editor-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+}
+
+.footer-left, .footer-right {
+    display: flex;
+    gap: 8px;
+}
+
+/* Кнопки */
+.editor-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    outline: none;
+}
+
+.editor-btn-primary {
+    background: linear-gradient(135deg, #7c5cff, #6b4ecc);
+    color: white;
+    box-shadow: 0 4px 12px rgba(124, 92, 255, 0.3);
+}
+
+.editor-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(124, 92, 255, 0.4);
+}
+
+.editor-btn-secondary {
+    background: white;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+}
+
+.editor-btn-secondary:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+}
+
+.editor-btn-danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.editor-btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+}
+
+.btn-icon {
+    font-size: 16px;
+}
+
+/* Адаптивность */
+@media (max-width: 640px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .editor-footer {
+        flex-direction: column-reverse;
+        gap: 12px;
+    }
+
+    .footer-left, .footer-right {
+        width: 100%;
+    }
+
+    .editor-btn {
+        flex: 1;
+    }
+}
+
+/* Анимации */
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal.open .modal-card {
+    animation: modalSlideIn 0.3s ease;
+}
+
+/* Контейнер с кнопками */
+.recommendations-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.btn-ai {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-ai:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-ai:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Панель рекомендаций - исправляем позиционирование */
+.recommendations-panel {
+    position: fixed;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%);
+    width: 360px;
+    max-height: 550px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    border: 1px solid #e5e7eb;
+    z-index: 1001;
+    display: none;
+    overflow: hidden;
+    animation: slideInRight 0.3s ease;
+}
+
+@media (max-width: 768px) {
+    .recommendations-panel {
+        width: 300px;
+        right: 10px;
+        max-height: 500px;
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translate(30px, -50%);
+    }
+    to {
+        opacity: 1;
+        transform: translate(0, -50%);
+    }
+}
+
+.recommendations-panel.open {
+    display: block;
+}
+
+.recommendations-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: linear-gradient(135deg, #7c5cff, #6b4ecc);
+    color: white;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.recommendations-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.recommendations-icon {
+    font-size: 18px;
+}
+
+.recommendations-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+}
+
+.recommendations-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+
+.recommendations-content {
+    padding: 16px;
+    max-height: 450px;
+    overflow-y: auto;
+}
+
+/* Стили для элементов рекомендаций */
+.rec-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+
+.rec-item:hover {
+    background: white;
+    border-color: #7c5cff;
+    transform: translateX(4px);
+    box-shadow: 0 4px 8px rgba(124, 92, 255, 0.15);
+}
+
+.rec-item.experienced {
+    background: rgba(34, 197, 94, 0.05);
+    border-left: 3px solid #22c55e;
+}
+
+.rec-item.selected {
+    background: rgba(124, 92, 255, 0.1);
+    border-color: #7c5cff;
+}
+
+.rec-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7c5cff, #6b4ecc);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.rec-info {
+    flex: 1;
+}
+
+.rec-name {
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 6px;
+    color: #111827;
+}
+
+.rec-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 10px;
+}
+
+.rec-degree {
+    background: rgba(124, 92, 255, 0.1);
+    color: #7c5cff;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.rec-pmk {
+    background: #f3f4f6;
+    color: #6b7280;
+    padding: 2px 6px;
+    border-radius: 12px;
+}
+
+.rec-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.rec-badge.experience {
+    background: #22c55e;
+    color: white;
+}
+
+.rec-badge.rank-high {
+    background: #f59e0b;
+    color: white;
+}
+
+.rec-arrow {
+    color: #9ca3af;
+    font-size: 14px;
+    margin-left: 8px;
+    opacity: 0;
+    transition: all 0.2s;
+}
+
+.rec-item:hover .rec-arrow {
+    opacity: 1;
+    transform: translateX(4px);
+    color: #7c5cff;
+}
+
+/* Загрузчик */
+.recommendations-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: #6b7280;
+    gap: 15px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #7c5cff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Пустое состояние */
+.recommendations-empty {
+    text-align: center;
+    padding: 40px;
+}
+
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #111827;
+    margin-bottom: 8px;
+}
+
+.empty-hint {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+/* Заметка */
+.recommendations-note {
+    margin-bottom: 16px;
+    padding: 12px;
+    background: #fef3c7;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #92400e;
+    border-left: 3px solid #f59e0b;
+}
+
+/* Адаптация для темной темы */
+@media (prefers-color-scheme: dark) {
+    .recommendations-panel {
+        background: #1f2937;
+        border-color: #374151;
+    }
+
+    .rec-item {
+        background: #111827;
+        border-color: #374151;
+    }
+
+    .rec-item:hover {
+        background: #1f2937;
+    }
+
+    .rec-name {
+        color: #f3f4f6;
+    }
+
+    .rec-pmk {
+        background: #374151;
+        color: #9ca3af;
+    }
+
+    .recommendations-empty .empty-text {
+        color: #f3f4f6;
+    }
+}
+
+
+/* В файл sh.css добавьте */
+
+/* Кнопка рекомендаций */
+.editor-btn-info {
+    background: linear-gradient(135deg, #7c5cff, #6b4ecc);
+    color: white;
+    border: none;
+}
+
+.editor-btn-info:hover {
+    background: linear-gradient(135deg, #6b4ecc, #5a3db3);
+    transform: translateY(-1px);
+}
+
+/* Панель рекомендаций внутри редактора */
+.editor-recommendations {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 380px;
+    height: 100%;
+    background: var(--card);
+    border-left: 1px solid var(--border);
+    box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.editor-recommendations .recommendations-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-secondary);
+    flex-shrink: 0;
+}
+
+.editor-recommendations .recommendations-tabs {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.editor-recommendations .rec-tab {
+    flex: 1;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.editor-recommendations .rec-tab.active {
+    background: linear-gradient(135deg, #7c5cff, #6b4ecc);
+    color: white;
+    border-color: transparent;
+}
+
+.editor-recommendations .recommendations-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.editor-recommendations .recommendations-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Режим администратора - панель рекомендаций */
+.admin-mode .editor-recommendations {
+    background: var(--card);
+}
+
+/* Стили для панели рекомендаций в редакторе */
+.editor-recommendations-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 450px;
+    height: 100%;
+    background: var(--card);
+    border-left: 1px solid var(--border);
+    box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.rec-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, #7c5cff10, #6b4ecc10);
+}
+
+.rec-title {
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.rec-icon {
+    font-size: 20px;
+    margin-right: 8px;
+}
+
+.rec-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.rec-close:hover {
+    background: var(--bg-hover);
+}
+
+.rec-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-secondary);
+}
+
+.rec-tab {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.rec-tab.active {
+    background: linear-gradient(135deg, #7c5cff, #6b4ecc);
+    color: white;
+    border-color: transparent;
+}
+
+.rec-loading {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 40px;
+}
+
+.rec-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.rec-section {
+    margin-bottom: 24px;
+}
+
+.rec-section-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.rec-section-items {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.rec-item {
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.rec-item:hover {
+    border-color: var(--primary);
+    background: var(--bg-hover);
+    transform: translateX(2px);
+}
+
+.rec-item-main {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.rec-course, .rec-group, .rec-type, .rec-room {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+.rec-course {
+    background: #7c5cff20;
+    color: #7c5cff;
+}
+
+.rec-group {
+    background: #22c55e20;
+    color: #22c55e;
+}
+
+.rec-type {
+    background: #f59e0b20;
+    color: #f59e0b;
+}
+
+.rec-room {
+    background: #3b82f620;
+    color: #3b82f6;
+}
+
+.rec-item-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.rec-confidence, .rec-frequency {
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.rec-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 40px;
+    text-align: center;
+}
+
+.editor-btn-success {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: white;
+    border: none;
+}
+
+.editor-btn-success:hover {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+}
+
+/* Добавьте в конец файла sh.css */
+
+/* Анимация для элементов рекомендаций */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Стили для вкладок рекомендаций */
+.rec-type-tab {
+    transition: all 0.2s ease;
+}
+
+.rec-type-tab.active {
+    background: linear-gradient(135deg, #7c5cff, #6b4ecc) !important;
+    color: white !important;
+    border-color: transparent !important;
+}
+
+/* Стили для элементов рекомендаций в модальном окне */
+#editorRecList .rec-item {
+    transition: all 0.2s ease;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    background: var(--card);
+}
+
+#editorRecList .rec-item:hover {
+    transform: translateX(5px);
+    border-color: #7c5cff;
+    box-shadow: 0 4px 12px rgba(124, 92, 255, 0.15);
+}
+
+/* Информация о текущей паре в модальном окне */
+#editorRecPairInfo {
+    background: linear-gradient(135deg, #7c5cff08, #6b4ecc08);
+    border: 1px solid #7c5cff30;
+    border-radius: 12px;
+    padding: 14px;
+}
+
+
+/* Стили для модального окна рекомендаций */
+#editorRecModal .modal-card {
+    max-width: 550px;
+    width: 90%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0 !important;
+}
+
+#editorRecModal .editor-header {
+    flex-shrink: 0;
+    padding: 16px 20px;
+}
+
+#editorRecModal .editor-header h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+/* Контент модального окна */
+#editorRecModal > div > div:first-of-type {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px !important;
+}
+
+/* Информация о текущей паре */
+#editorRecPairInfo {
+    background: linear-gradient(135deg, #7c5cff08, #6b4ecc08);
+    border: 1px solid #7c5cff30;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 20px;
+}
+
+#editorRecPairInfo h4 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.current-pair-details {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.current-pair-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.current-pair-label {
+    font-size: 11px;
+    color: var(--muted);
+}
+
+.current-pair-value {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    word-break: break-word;
+}
+
+/* Вкладки */
+.rec-type-tab {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.rec-type-tab.active {
+    background: linear-gradient(135deg, #7c5cff, #6b4ecc);
+    color: white;
+    border-color: transparent;
+}
+
+/* Список рекомендаций */
+#editorRecList {
+    max-height: 350px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Элемент рекомендации */
+#editorRecList .rec-item {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+    background: var(--card);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#editorRecList .rec-item:hover {
+    transform: translateX(4px);
+    border-color: #7c5cff;
+    box-shadow: 0 4px 12px rgba(124, 92, 255, 0.15);
+}
+
+/* Поля в рекомендациях */
+.rec-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+
+.rec-field span {
+    line-height: 1.4;
+}
+
+.rec-field .rec-field-label {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.rec-field .rec-field-value {
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--text);
+    word-break: break-word;
+}
+
+/* Бейджи */
+.rec-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Статистика */
+.rec-item-stats {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    font-size: 10px;
+    color: var(--muted);
+    flex-wrap: wrap;
+}
+
+.rec-stat {
+    white-space: nowrap;
+}
+
+/* Загрузчик */
+#editorRecLoading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    gap: 15px;
+}
+
+/* Пустое состояние */
+#editorRecEmpty {
+    text-align: center;
+    padding: 40px;
+}
+
+#editorRecEmpty .empty-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+#editorRecEmpty .empty-text {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 5px;
+}
+
+#editorRecEmpty .empty-hint {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+/* Футер модального окна */
+#editorRecModal .editor-footer {
+    flex-shrink: 0;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--card);
+}
+
+/* Адаптивность */
+@media (max-width: 640px) {
+    #editorRecModal .modal-card {
+        width: 95%;
+        max-height: 85vh;
+    }
+
+    .current-pair-details {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .rec-item-stats {
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .rec-stat {
+        white-space: normal;
+    }
+
+    .rec-badge {
+        white-space: normal;
+        word-break: break-word;
+    }
+}

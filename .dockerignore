@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+/__pycache__/
+*/*/__pycache__/
+*/*/*/__pycache__/
+*/*/*/*/__pycache__/
+*.pyc
+.env
+test.py
+db_test.py
+.dockerignore
+testing_version_AI/
