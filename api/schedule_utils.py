@@ -92,9 +92,10 @@ def get_first_last_day_of_month(year, month):
 
 
 def format_schedule_data(data):
-    """Форматирование данных расписания для фронтенда"""
+    """Форматирование данных расписания для фронтенда (без циклов по teachers/rooms)"""
     result = {}
     period_mapping = {'1-2 час': 0, '3-4 час': 1, '5-6 час': 2, '7-8 час': 3}
+
     for row in data:
         teacher_name = row['teacher_name']
         event_date = row['event_date']
@@ -103,10 +104,11 @@ def format_schedule_data(data):
             result[teacher_name] = {}
 
         if event_date not in result[teacher_name]:
-            result[teacher_name][event_date] = [None, None, None, None]  # 4 пары
+            result[teacher_name][event_date] = [None, None, None, None]
 
         pair_index = period_mapping.get(row['period_name'], 0)
 
+        # Используем готовые массивы из SQL
         result[teacher_name][event_date][pair_index] = {
             'type': row['event_type'],
             'room': row['room_name'] or 'Ауд. не указана',
@@ -118,8 +120,14 @@ def format_schedule_data(data):
             'gid': row['gid'],
             'rid': row['rid'],
             'period': row['lid'],
-            'cathedra_id': row.get('idcathedra', None),  # Добавляем ID кафедры
-            'typeid': row.get('pair_type_id', None),  # Добавляем ID типа занятия
+            'cathedra_id': row.get('idcathedra', None),
+            'typeid': row.get('pair_type_id', None),
+            'lesson_num': row.get('lesson_num', None),
+            # Используем готовые массивы из БД
+            'teachers': row.get('all_teachers') or [],
+            'teacher_mids': row.get('all_teacher_mids') or [],
+            'rooms': row.get('all_rooms') or [],
+            'rids': row.get('all_rids') or [],
         }
 
     return result

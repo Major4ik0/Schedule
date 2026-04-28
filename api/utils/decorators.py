@@ -38,7 +38,7 @@ def require_params(*params, source='json'):
                     missing.append(p)
                 # Для числовых полей (которые могут быть 0) проверяем только на None
                 elif p in ['pair_index', 'typeid', 'rid', 'gid', 'cid', 'period_id', 'day_of_week', 'schedule_id',
-                           'exclude_teacher_id', 'cathedra_id', 'group_id', 'study_year_id']:
+                           'exclude_teacher_id', 'cathedra_id', 'group_id', 'study_year_id', 'lesson_num']:
                     if value is None:
                         missing.append(p)
                 # Для строковых полей проверяем на пустоту

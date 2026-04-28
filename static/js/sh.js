@@ -109,8 +109,6 @@ const isAdminMode = () => {
 // Функция для загрузки данных в модальное окно
 const loadModalData = async () => {
     try {
-        console.log('Loading modal data...');
-
         const [disciplinesRes, classroomsRes, lessonTypesRes, groupsRes] = await Promise.all([
             fetch(`${API_BASE}/getDisciplines`),
             fetch(`${API_BASE}/getClassrooms`),
@@ -118,23 +116,33 @@ const loadModalData = async () => {
             fetch(`${API_BASE}/getGroups`)
         ]);
 
-        if (!disciplinesRes.ok || !classroomsRes.ok || !lessonTypesRes.ok || !groupsRes.ok) {
-            throw new Error('Failed to load modal data');
-        }
-
         DISCIPLINES = await disciplinesRes.json();
         CLASSROOMS = await classroomsRes.json();
-        LESSON_TYPES = await lessonTypesRes.ok ? await lessonTypesRes.json() : [];
+        LESSON_TYPES = await lessonTypesRes.json();
         GROUPS = await groupsRes.json();
-        // Заполняем выпадающие списки
+
+        // Заполняем одиночные селекты
         populateSelect('f_type', LESSON_TYPES, 'id', 'alias');
-        populateSelect('f_room', CLASSROOMS, 'id', 'short_name');
-        populateSelect('f_group', GROUPS, 'id', 'name');
         populateSelect('f_course', DISCIPLINES, 'id', 'alias');
+
+        // Заполняем одиночные селекты для преподавателей
+        const teachersSorted = Object.keys(TEACHERS_LIST).sort((a, b) => a.localeCompare(b, 'ru'));
+        teacherSingle.innerHTML = '<option value="">Выберите преподавателя</option>' +
+            teachersSorted.map(n => `<option value="${n}">${n}</option>`).join('');
+
+        // Заполняем одиночные селекты для аудиторий
+        roomSingle.innerHTML = '<option value="">Выберите аудиторию</option>' +
+            CLASSROOMS.map(r => `<option value="${r.id}">${r.short_name}</option>`).join('');
+
+        // Заполняем одиночные селекты для групп
+        groupSingle.innerHTML = '<option value="">Выберите группу</option>' +
+            GROUPS.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+
+        // Инициализируем множественный выбор
+        initMultiSelect();
 
     } catch (error) {
         console.error('Error loading modal data:', error);
-        // Fallback - оставляем поля как есть
     }
 };
 
@@ -465,12 +473,71 @@ const rail = document.getElementById('rail'),
 const modal = document.getElementById('modal'),
     modalTitle = document.getElementById('modalTitle'),
     f_type = document.getElementById('f_type'),
-    f_room = document.getElementById('f_room'),
-    f_group = document.getElementById('f_group'),
+    // f_room = document.getElementById('f_room'),
+    // f_group = document.getElementById('f_group'),
     f_course = document.getElementById('f_course'),
+    f_lesson_num = document.getElementById('f_lesson_num'),
     btnSave = document.getElementById('btnSave'),
     btnCancel = document.getElementById('btnCancel'),
     btnDelete = document.getElementById('btnDelete');
+
+// Новые элементы для панели кандидатов
+const candidatesPanel = document.getElementById('candidatesPanel'),
+    candidatesLoading = document.getElementById('candidatesLoading'),
+    candidatesBusyList = document.getElementById('candidatesBusyList'),
+    candidatesFreeExpList = document.getElementById('candidatesFreeExpList'),
+    candidatesFreeOtherList = document.getElementById('candidatesFreeOtherList'),
+    candidatesEmpty = document.getElementById('candidatesEmpty'),
+    candidatesBtn = document.getElementById('showCandidatesBtn');
+
+const teacherContainer = document.getElementById('teacherContainer'),
+    teacherSingle = document.getElementById('teacherSingle'),
+    multiTeacher = document.getElementById('multiTeacher'),
+    teacherMulti = document.getElementById('teacherMulti'),
+    teacherToggle = document.getElementById('teacherToggle'),
+    teacherDropdown = document.getElementById('teacherDropdown'),
+    teacherSearch = document.getElementById('teacherSearch'),
+    teacherList = document.getElementById('teacherList'),
+    teacherBadge = document.getElementById('teacherBadge'),
+    teacherSelectAll = document.getElementById('teacherSelectAll'),
+    teacherSelectNone = document.getElementById('teacherSelectNone');
+
+// Множественный выбор аудиторий
+const roomContainer = document.getElementById('roomContainer'),
+    roomSingle = document.getElementById('roomSingle'),
+    multiRoom = document.getElementById('multiRoom'),
+    roomMulti = document.getElementById('roomMulti'),
+    roomToggle = document.getElementById('roomToggle'),
+    roomDropdown = document.getElementById('roomDropdown'),
+    roomSearch = document.getElementById('roomSearch'),
+    roomList = document.getElementById('roomList'),
+    roomBadge = document.getElementById('roomBadge'),
+    roomSelectAll = document.getElementById('roomSelectAll'),
+    roomSelectNone = document.getElementById('roomSelectNone');
+
+// Множественный выбор групп
+const groupContainer = document.getElementById('groupContainer'),
+    groupSingle = document.getElementById('groupSingle'),
+    multiGroup = document.getElementById('multiGroup'),
+    groupMulti = document.getElementById('groupMulti'),
+    groupToggle = document.getElementById('groupToggle'),
+    groupDropdown = document.getElementById('groupDropdown'),
+    groupSearch = document.getElementById('groupSearch'),
+    groupList = document.getElementById('groupList'),
+    groupBadge = document.getElementById('groupBadge'),
+    groupSelectAll = document.getElementById('groupSelectAll'),
+    groupSelectNone = document.getElementById('groupSelectNone');
+
+
+const addScheduleBtn = document.getElementById('addSchedule'),
+    f_date = document.getElementById('f_date'),
+    f_teacher = document.getElementById('f_teacher'),
+    f_pair = document.getElementById('f_pair');
+
+// Состояния выбора
+let selectedTeachersModal = new Set();
+let selectedRoomsModal = new Set();
+let selectedGroupsModal = new Set();
 
 // Мультиселект элементы
 const ms = document.getElementById('msTeachers'),
@@ -523,6 +590,214 @@ switchModeBtn.addEventListener('click', () => {
         resetSwapSelection();
     }
 });
+
+// Инициализация множественного выбора
+const initMultiSelect = () => {
+    // Инициализация каждого компонента
+    setupMultiSelect('teacher', teacherToggle, teacherDropdown, teacherSearch,
+                     teacherList, teacherBadge, teacherSelectAll, teacherSelectNone,
+                     selectedTeachersModal, Object.keys(TEACHERS_LIST).sort((a, b) => a.localeCompare(b, 'ru')));
+
+    setupMultiSelect('room', roomToggle, roomDropdown, roomSearch,
+                     roomList, roomBadge, roomSelectAll, roomSelectNone,
+                     selectedRoomsModal, CLASSROOMS.map(r => ({id: r.id, name: r.short_name})));
+
+    setupMultiSelect('group', groupToggle, groupDropdown, groupSearch,
+                     groupList, groupBadge, groupSelectAll, groupSelectNone,
+                     selectedGroupsModal, GROUPS.map(g => ({id: g.id, name: g.name})));
+
+    // Обработчики чекбоксов "Несколько"
+    multiTeacher.addEventListener('change', () => toggleMultiMode('teacher'));
+    multiRoom.addEventListener('change', () => toggleMultiMode('room'));
+    multiGroup.addEventListener('change', () => toggleMultiMode('group'));
+
+    // Закрытие дропдаунов при клике вне
+    document.addEventListener('click', (e) => {
+        [teacherDropdown, roomDropdown, groupDropdown].forEach(dropdown => {
+            if (dropdown.style.display === 'block' && !dropdown.parentElement.contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+    });
+};
+
+const setupMultiSelect = (type, toggle, dropdown, search, list, badge, selectAll, selectNone, selectedSet, items) => {
+    // Переключение дропдауна
+    toggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+    });
+
+    // Рендер списка
+    const renderList = (filter = '') => {
+        list.innerHTML = items
+            .filter(item => {
+                const name = typeof item === 'string' ? item : item.name;
+                return name.toLowerCase().includes(filter.toLowerCase());
+            })
+            .map(item => {
+                const id = typeof item === 'string' ? item : item.id;
+                const name = typeof item === 'string' ? item : item.name;
+                const isSelected = selectedSet.has(id.toString());
+                return `
+                    <div class="multi-item ${isSelected ? 'selected' : ''}" data-id="${id}">
+                        <input type="checkbox" ${isSelected ? 'checked' : ''}>
+                        <span>${name}</span>
+                    </div>
+                `;
+            }).join('');
+
+        // Обработчики выбора
+        list.querySelectorAll('.multi-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const id = item.dataset.id;
+                const checkbox = item.querySelector('input[type="checkbox"]');
+                checkbox.checked = !checkbox.checked;
+
+                if (checkbox.checked) {
+                    selectedSet.add(id);
+                    item.classList.add('selected');
+                } else {
+                    selectedSet.delete(id);
+                    item.classList.remove('selected');
+                }
+
+                updateBadge(type);
+            });
+        });
+    };
+
+    // Поиск
+    search.addEventListener('input', (e) => {
+        renderList(e.target.value);
+    });
+
+    // Выбрать все
+    selectAll.addEventListener('click', () => {
+        items.forEach(item => {
+            const id = typeof item === 'string' ? item : item.id;
+            selectedSet.add(id.toString());
+        });
+        renderList(search.value);
+        updateBadge(type);
+    });
+
+    // Сбросить
+    selectNone.addEventListener('click', () => {
+        selectedSet.clear();
+        renderList(search.value);
+        updateBadge(type);
+    });
+
+    // Начальный рендер
+    renderList();
+};
+
+// Флаг для отслеживания режима ручного добавления
+let isManualAdd = false;
+
+// Функция открытия модального окна для ручного добавления
+const openManualAddModal = () => {
+    // Сбрасываем контекст
+    ctx = null;
+    isManualAdd = true;
+
+    // Сбрасываем состояния множественного выбора
+    selectedTeachersModal.clear();
+    selectedRoomsModal.clear();
+    selectedGroupsModal.clear();
+    multiTeacher.checked = false;
+    multiRoom.checked = false;
+    multiGroup.checked = false;
+    toggleMultiMode('teacher');
+    toggleMultiMode('room');
+    toggleMultiMode('group');
+    updateBadge('teacher');
+    updateBadge('room');
+    updateBadge('group');
+
+    // Очищаем все поля
+    f_type.value = '';
+    f_lesson_num.value = '';
+    f_course.value = '';
+    teacherSingle.value = '';
+    roomSingle.value = '';
+    groupSingle.value = '';
+
+    // Заполняем ручные поля
+    f_date.value = new Date().toISOString().split('T')[0];
+    f_pair.value = '';
+
+    // Заполняем список преподавателей, если еще не заполнен
+    if (f_teacher.options.length <= 1) {
+        const teachersSorted = Object.keys(TEACHERS_LIST).sort((a, b) => a.localeCompare(b, 'ru'));
+        f_teacher.innerHTML = '<option value="">Выберите преподавателя</option>' +
+            teachersSorted.map(n => `<option value="${n}">${n}</option>`).join('');
+    }
+    f_teacher.value = '';
+
+    // Показываем скрытые поля
+    document.querySelectorAll('.manual-field').forEach(el => el.style.display = 'block');
+
+    // Скрываем кнопку удаления
+    btnDelete.style.display = 'none';
+
+    // Открываем модальное окно
+    openModal('Добавление расписания', null);
+};
+
+
+
+const updateBadge = (type) => {
+    let selectedSet, badge, itemCount;
+
+    switch(type) {
+        case 'teacher':
+            selectedSet = selectedTeachersModal;
+            badge = teacherBadge;
+            itemCount = Object.keys(TEACHERS_LIST).length;
+            break;
+        case 'room':
+            selectedSet = selectedRoomsModal;
+            badge = roomBadge;
+            itemCount = CLASSROOMS.length;
+            break;
+        case 'group':
+            selectedSet = selectedGroupsModal;
+            badge = groupBadge;
+            itemCount = GROUPS.length;
+            break;
+    }
+
+    const count = selectedSet.size;
+    if (count === 0) {
+        badge.textContent = 'Ничего не выбрано';
+        badge.className = 'badge none';
+    } else if (count === itemCount) {
+        badge.textContent = 'Все';
+        badge.className = 'badge all';
+    } else {
+        badge.textContent = `${count} выбрано`;
+        badge.className = 'badge some';
+    }
+};
+
+const toggleMultiMode = (type) => {
+    switch(type) {
+        case 'teacher':
+            teacherContainer.style.display = multiTeacher.checked ? 'none' : 'block';
+            teacherMulti.style.display = multiTeacher.checked ? 'block' : 'none';
+            break;
+        case 'room':
+            roomContainer.style.display = multiRoom.checked ? 'none' : 'block';
+            roomMulti.style.display = multiRoom.checked ? 'block' : 'none';
+            break;
+        case 'group':
+            groupContainer.style.display = multiGroup.checked ? 'none' : 'block';
+            groupMulti.style.display = multiGroup.checked ? 'block' : 'none';
+            break;
+    }
+};
 
 // Обработчики для модального окна замены
 swapCancel.addEventListener('click', () => {
@@ -839,16 +1114,16 @@ const getFallbackPeriods = (date) => {
     // Дефолтное расписание на основе учебного года
     const defaultPeriods = {
         2025: [  // 2025-2026 учебный год (s_year_id = 34)
-            {index: 0, pair_id: 112, name: '1-2 vac', short_name: '1-я пара', time_range: ''},
-            {index: 1, pair_id: 113, name: '3-4 vac', short_name: '2-я пара', time_range: ''},
-            {index: 2, pair_id: 114, name: '5-6 vac', short_name: '3-я пара', time_range: ''},
-            {index: 3, pair_id: 115, name: '7-8 vac', short_name: '4-я пара', time_range: ''}
+            {index: 0, pair_id: 112, name: '1-2 vac', short_name: '1-2 час', time_range: ''},
+            {index: 1, pair_id: 113, name: '3-4 vac', short_name: '3-4 час', time_range: ''},
+            {index: 2, pair_id: 114, name: '5-6 vac', short_name: '4-5 час', time_range: ''},
+            {index: 3, pair_id: 115, name: '7-8 vac', short_name: '7-8 час', time_range: ''}
         ],
         2024: [  // 2024-2025 учебный год (s_year_id = 33)
-            {index: 0, pair_id: 104, name: '1-2 vac', short_name: '1-я пара', time_range: ''},
-            {index: 1, pair_id: 105, name: '3-4 vac', short_name: '2-я пара', time_range: ''},
-            {index: 2, pair_id: 106, name: '5-6 vac', short_name: '3-я пара', time_range: ''},
-            {index: 3, pair_id: 107, name: '7-8 vac', short_name: '4-я пара', time_range: ''}
+            {index: 0, pair_id: 104, name: '1-2 vac', short_name: '1-2 час', time_range: ''},
+            {index: 1, pair_id: 105, name: '3-4 vac', short_name: '3-4 час', time_range: ''},
+            {index: 2, pair_id: 106, name: '5-6 vac', short_name: '5-6 час', time_range: ''},
+            {index: 3, pair_id: 107, name: '7-8 vac', short_name: '7-8 час', time_range: ''}
         ]
     };
 
@@ -966,10 +1241,12 @@ const fillTeachers = async () => {
 
         // Заполняем категории в мультиселекте
         renderTeacherCategories();
-
         // Заполняем мультиселект с цветами
-        renderTeacherList('all');
+        await renderTeacherList('all');
+        updateMsBadge();
 
+        Object.keys(TEACHERS_LIST).forEach(n => selectedTeachers.add(n));
+        allTeachersChk.checked = true;
         updateMsBadge();
 
         // Автоматически выбираем всех преподавателей, если их немного
@@ -1096,7 +1373,7 @@ const buildHeadRow = (year, month0, lastDay) => {
     const tr = document.createElement('tr');
     const th0 = document.createElement('th');
     th0.className = 'col-pair col-head row-head';
-    th0.textContent = 'Часы занятий';
+    th0.textContent = 'Часы';
     tr.appendChild(th0);
 
     const now = new Date(),
@@ -1171,7 +1448,7 @@ const renderTeacher = async (teacher, monthVal) => {
             td.innerHTML = pair ?
                 `<div class="pair">
                     <div class="line">
-                        <span class="chip"><span class="dot"></span>${pair.type}</span>
+                        <span class="chip"><span class="dot"></span>${pair.type}${pair.lesson_num ? ` ${pair.lesson_num}` : ''}</span>
                         <span class="chip green"><span class="dot"></span>${pair.room}</span>
                     </div>
                     <div class="line">
@@ -1252,15 +1529,15 @@ const renderCombinedStacked = async (teachers, monthVal) => {
                 // language=HTML
                 td.innerHTML = pair ?
                     `<div class="pair">
-                        <div class="line">
-                            <span class="chip"><span class="dot"></span>${pair.type}</span>
-                            <span class="chip green"><span class="dot"></span>${pair.room}</span>
-                        </div>
-                        <div class="line">
-                            <span class="chip">${pair.group}</span>
-                            <span class="chip">${pair.course}</span>
-                        </div>
-                    </div>` : `<span class="chip muted">-</span>`;
+                    <div class="line">
+                        <span class="chip"><span class="dot"></span>${pair.type}${pair.lesson_num ? ` ${pair.lesson_num}` : ''}</span>
+                        <span class="chip green"><span class="dot"></span>${pair.room}</span>
+                    </div>
+                    <div class="line">
+                        <span class="chip">${pair.group}</span>
+                        <span class="chip">${pair.course}</span>
+                    </div>
+                </div>` : `<span class="chip muted">-</span>`;
                 tr.appendChild(td);
             }
             tbody.appendChild(tr);
@@ -1448,7 +1725,7 @@ const populateJumpTeacher = async () => {
 let ctx = null;
 
 // Найдите функцию openModal в sh.js и обновите её
-const openModal = (title, pairData = null) => {
+let openModal = (title, pairData = null) => {
     const modal = document.getElementById('modal');
     const modalTitle = document.getElementById('modalTitle');
     const pairInfo = document.getElementById('pairInfo');
@@ -1458,7 +1735,7 @@ const openModal = (title, pairData = null) => {
 
     // Заполняем информацию о паре
     if (pairData) {
-        const hoursMap = ['1-2 пара', '3-4 пара', '5-6 пара', '7-8 пара'];
+        const hoursMap = ['1-2 час', '3-4 час', '5-6 час', '7-8 час'];
 
         pairInfo.innerHTML = `
             <div class="pair-info-icon">📅</div>
@@ -1484,113 +1761,195 @@ const openModal = (title, pairData = null) => {
     if (recPanel) recPanel.style.display = 'none';
 };
 
+
+// Скрытие ручных полей при обычном редактировании
+const originalOpenModal = openModal;
+openModal = function(title, pairData = null) {
+    if (!isManualAdd) {
+        document.querySelectorAll('.manual-field').forEach(el => el.style.display = 'none');
+    }
+    originalOpenModal(title, pairData);
+};
+
 const closeModal = () => {
     modal.setAttribute('aria-hidden', 'true');
     modal.classList.remove('open');
+    isManualAdd = false; // Сбрасываем флаг
+    document.querySelectorAll('.manual-field').forEach(el => el.style.display = 'none');
 };
 
-// Обработчик клика по ячейке для редактирования
-tables.addEventListener('click', async (e) => {
-    const td = e.target.closest('td');
-    if (!td || !td.dataset.teacher) return;
-    // Сохраняем позицию ДО любых действий
-    saveScrollPosition();
-
-    // Если в режиме замены
-    if (swapMode) {
-        // Проверяем, есть ли пара в ячейке
-        const teacher = td.dataset.teacher;
-        const iso = td.dataset.date;
-        const index = Number(td.dataset.index);
-        const scheduleId = td.dataset.scheduleId;
-
-        if (!scheduleId) {
-            showNotification('В этой ячейке нет пары для замены', 'error');
-            return;
-        }
-
-        // Снимаем выделение с предыдущей ячейки
-        if (selectedSwapCell) {
-            selectedSwapCell.classList.remove('swap-selected');
-        }
-
-        // Выделяем новую ячейку
-        td.classList.add('swap-selected');
-        selectedSwapCell = td;
-
-        // Открываем модальное окно замены
-        await openSwapModal(teacher, iso, index, scheduleId);
+addScheduleBtn.addEventListener('click', () => {
+    if (Object.keys(TEACHERS_LIST).length === 0) {
+        alert('Сначала загрузите список преподавателей (нажмите "Показать расписание")');
         return;
     }
-
-    if (!isAdminMode() || !td.dataset.teacher) return;
-
-    if (DISCIPLINES.length === 0) {
-        await loadModalData();
-    }
-
-    const teacher = td.dataset.teacher;
-    const iso = td.dataset.date;
-    const index = Number(td.dataset.index);
-    const scheduleId = td.dataset.scheduleId;
-    const teacher_mid = td.dataset.teacher_mid;
-    const period = td.dataset.period;
-    const cid = td.dataset.cid;
-    const rid = td.dataset.rid;
-    const gid = td.dataset.gid;
-
-    ctx = {teacher, iso, index, scheduleId, teacher_mid, period, cid, rid, gid};
-
-    const list = (DATA[teacher]?.[iso] || []);
-    const pair = list[index];
-
-    // Получаем ID из псевдонимов
-    const getTypeId = (typeAlias) => {
-        const found = LESSON_TYPES.find(item => item.alias === typeAlias);
-        return found ? found.id : '';
-    };
-
-    const getRoomId = (roomAlias) => {
-        const found = CLASSROOMS.find(item => item.short_name === roomAlias);
-        return found ? found.id : '';
-    };
-
-    const getGroupId = (groupName) => {
-        const found = GROUPS.find(item => item.name === groupName);
-        return found ? found.id : '';
-    };
-
-    const getCourseId = (courseAlias) => {
-        const found = DISCIPLINES.find(item => item.alias === courseAlias);
-        return found ? found.id : '';
-    };
-
-    // Устанавливаем значения
-    if (pair) {
-        f_type.value = getTypeId(pair.type);
-        f_room.value = getRoomId(pair.room);
-        f_group.value = getGroupId(pair.group);
-        f_course.value = getCourseId(pair.course);
-    } else {
-        f_type.value = '';
-        f_room.value = '';
-        f_group.value = '';
-        f_course.value = '';
-    }
-
-    btnDelete.style.display = pair && pair.schedule_id ? 'inline-flex' : 'none';
-
-    const hoursMap = ['1 - 2', '3 - 4', '5 - 6', '7 - 8'];
-    const title = `${teacher} — ${iso}`;
-
-    // Открываем с данными пары
-    openModal(title, {
-        teacher: teacher,
-        date: iso,
-        index: index,
-        scheduleId: scheduleId
-    });
+    openManualAddModal();
 });
+
+// Обработчик клика по ячейке для редактирования
+// tables.addEventListener('click', async (e) => {
+//     const td = e.target.closest('td');
+//     if (!td || !td.dataset.teacher) return;
+//     // Сохраняем позицию ДО любых действий
+//     saveScrollPosition();
+//
+//     // Если в режиме замены
+//     if (swapMode) {
+//         // Проверяем, есть ли пара в ячейке
+//         const teacher = td.dataset.teacher;
+//         const iso = td.dataset.date;
+//         const index = Number(td.dataset.index);
+//         const scheduleId = td.dataset.scheduleId;
+//
+//         if (!scheduleId) {
+//             showNotification('В этой ячейке нет пары для замены', 'error');
+//             return;
+//         }
+//
+//         // Снимаем выделение с предыдущей ячейки
+//         if (selectedSwapCell) {
+//             selectedSwapCell.classList.remove('swap-selected');
+//         }
+//
+//         // Выделяем новую ячейку
+//         td.classList.add('swap-selected');
+//         selectedSwapCell = td;
+//
+//         // Открываем модальное окно замены
+//         await openSwapModal(teacher, iso, index, scheduleId);
+//         return;
+//     }
+//
+//     if (!isAdminMode() || !td.dataset.teacher) return;
+//
+//     if (DISCIPLINES.length === 0) {
+//         await loadModalData();
+//     }
+//
+//     const teacher = td.dataset.teacher;
+//     const iso = td.dataset.date;
+//     const index = Number(td.dataset.index);
+//     const scheduleId = td.dataset.scheduleId;
+//     const teacher_mid = td.dataset.teacher_mid;
+//     const period = td.dataset.period;
+//     const cid = td.dataset.cid;
+//     const rid = td.dataset.rid;
+//     const gid = td.dataset.gid;
+//
+//     ctx = {teacher, iso, index, scheduleId, teacher_mid, period, cid, rid, gid};
+//
+//     const list = (DATA[teacher]?.[iso] || []);
+//     const pair = list[index];
+//
+//     // ===== ВАЖНО: СБРАСЫВАЕМ ВСЕ СОСТОЯНИЯ МНОЖЕСТВЕННОГО ВЫБОРА =====
+//     // Очищаем выбранные элементы
+//     selectedTeachersModal.clear();
+//     selectedRoomsModal.clear();
+//     selectedGroupsModal.clear();
+//
+//     // Снимаем все галочки "Несколько"
+//     multiTeacher.checked = false;
+//     multiRoom.checked = false;
+//     multiGroup.checked = false;
+//
+//     // Переключаем в одиночный режим
+//     toggleMultiMode('teacher');
+//     toggleMultiMode('room');
+//     toggleMultiMode('group');
+//
+//     // Обновляем бейджи
+//     updateBadge('teacher');
+//     updateBadge('room');
+//     updateBadge('group');
+//
+//     // Очищаем поля поиска в множественных списках
+//     if (teacherSearch) teacherSearch.value = '';
+//     if (roomSearch) roomSearch.value = '';
+//     if (groupSearch) groupSearch.value = '';
+//     // ===== КОНЕЦ СБРОСА =====
+//
+//     // Получаем ID из псевдонимов
+//     const getTypeId = (typeAlias) => {
+//         const found = LESSON_TYPES.find(item => item.alias === typeAlias);
+//         return found ? found.id : '';
+//     };
+//
+//     const getRoomId = (roomAlias) => {
+//         const found = CLASSROOMS.find(item => item.short_name === roomAlias);
+//         return found ? found.id : '';
+//     };
+//
+//     const getGroupId = (groupName) => {
+//         const found = GROUPS.find(item => item.name === groupName);
+//         return found ? found.id : '';
+//     };
+//
+//     const getCourseId = (courseAlias) => {
+//         const found = DISCIPLINES.find(item => item.alias === courseAlias);
+//         return found ? found.id : '';
+//     };
+//
+//     selectedTeachersModal.clear();
+//     selectedRoomsModal.clear();
+//     selectedGroupsModal.clear();
+//     multiTeacher.checked = false;
+//     multiRoom.checked = false;
+//     multiGroup.checked = false;
+//     toggleMultiMode('teacher');
+//     toggleMultiMode('room');
+//     toggleMultiMode('group');
+//
+//     // Устанавливаем значения
+//     if (pair) {
+//         f_type.value = getTypeId(pair.type);
+//         f_lesson_num.value = pair.lesson_num || '';
+//         f_course.value = getCourseId(pair.course);
+//
+//         // Для одиночного режима
+//         teacherSingle.value = teacher || '';
+//         roomSingle.value = getRoomId(pair.room);
+//         groupSingle.value = getGroupId(pair.group);
+//
+//         // Если есть множественные данные (при редактировании существующей пары)
+//         if (pair.teachers && pair.teachers.length > 1) {
+//             multiTeacher.checked = true;
+//             toggleMultiMode('teacher');
+//             pair.teachers.forEach(t => selectedTeachersModal.add(t));
+//             updateBadge('teacher');
+//         }
+//         if (pair.rooms && pair.rooms.length > 1) {
+//             multiRoom.checked = true;
+//             toggleMultiMode('room');
+//             pair.rooms.forEach(r => selectedRoomsModal.add(r.toString()));
+//             updateBadge('room');
+//         }
+//         if (pair.groups && pair.groups.length > 1) {
+//             multiGroup.checked = true;
+//             toggleMultiMode('group');
+//             pair.groups.forEach(g => selectedGroupsModal.add(g.toString()));
+//             updateBadge('group');
+//         }
+//     } else {
+//         f_type.value = '';
+//         roomSingle.value = '';
+//         groupSingle.value = '';
+//         f_course.value = '';
+//         f_lesson_num.value = '';
+//     }
+//
+//     btnDelete.style.display = pair && pair.schedule_id ? 'inline-flex' : 'none';
+//
+//     const hoursMap = ['1 - 2', '3 - 4', '5 - 6', '7 - 8'];
+//     const title = `${teacher} — ${iso}`;
+//
+//     // Открываем с данными пары
+//     openModal(title, {
+//         teacher: teacher,
+//         date: iso,
+//         index: index,
+//         scheduleId: scheduleId
+//     });
+// });
 
 // Функция открытия модального окна замены с улучшенным интерфейсом
 let openSwapModal = async (fromTeacher, date, pairIndex, scheduleId) => {
@@ -1747,6 +2106,81 @@ const populateTeacherListForSwap = async (excludeTeacher) => {
 
 // Сохранение изменений
 btnSave.addEventListener('click', async () => {
+    // Если ручное добавление
+    if (isManualAdd) {
+        const selectedDate = f_date.value;
+        const selectedTeacher = f_teacher.value;
+        const selectedPair = f_pair.value;
+
+        if (!selectedDate) {
+            alert('Выберите дату');
+            return;
+        }
+        if (!selectedTeacher) {
+            alert('Выберите преподавателя');
+            return;
+        }
+        if (selectedPair === '') {
+            alert('Выберите пару');
+            return;
+        }
+
+        const scheduleData = {
+            teacher_name: selectedTeacher,
+            teacher_mid: '',
+            period: '',
+            date: selectedDate,
+            pair_index: parseInt(selectedPair),
+            typeid: f_type.value.trim(),
+            cid: f_course.value.trim(),
+            lesson_num: f_lesson_num.value.trim() || null
+        };
+
+        // Обработка множественных полей
+        if (multiTeacher.checked) {
+            scheduleData.teachers = Array.from(selectedTeachersModal);
+            scheduleData.teacher_name = scheduleData.teachers[0] || selectedTeacher;
+        }
+
+        if (multiRoom.checked) {
+            scheduleData.rooms = Array.from(selectedRoomsModal);
+            scheduleData.rid = scheduleData.rooms[0] || '';
+        } else {
+            scheduleData.rid = roomSingle.value.trim();
+        }
+
+        if (multiGroup.checked) {
+            scheduleData.groups = Array.from(selectedGroupsModal);
+            scheduleData.gid = scheduleData.groups[0] || '';
+        } else {
+            scheduleData.gid = groupSingle.value.trim();
+        }
+
+        // Валидация
+        if (!scheduleData.typeid || !scheduleData.cid || !scheduleData.rid || !scheduleData.gid) {
+            alert('Пожалуйста, заполните все обязательные поля');
+            return;
+        }
+
+        try {
+            saveScrollPosition();
+            const result = await postSchedule(scheduleData);
+
+            if (result.success) {
+                closeModal();
+                isManualAdd = false;
+                const selectedTeachers = getSelectedTeachers();
+                const monthVal = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+                await loadScheduleData(selectedTeachers, monthVal);
+                alert('Расписание успешно добавлено!');
+            } else {
+                alert('Ошибка при добавлении: ' + (result.error || 'Неизвестная ошибка'));
+            }
+        } catch (error) {
+            alert('Ошибка при добавлении: ' + error.message);
+        }
+        return;
+    }
     if (!ctx) return;
 
     const {teacher, iso, index, scheduleId, teacher_mid, period, cid, rid, gid} = ctx;
@@ -1757,13 +2191,39 @@ btnSave.addEventListener('click', async () => {
         date: iso,
         pair_index: index,
         typeid: f_type.value.trim(),
-        rid: f_room.value.trim(),
-        gid: f_group.value.trim(),
-        cid: f_course.value.trim()
+        rid: roomSingle.value.trim(),
+        gid: groupSingle.value.trim(),
+        cid: f_course.value.trim(),
+        lesson_num: f_lesson_num.value.trim() || null
     };
 
-    if (!scheduleData.typeid || !scheduleData.rid || !scheduleData.gid || !scheduleData.cid) {
-        alert('Пожалуйста, заполните все поля');
+    // Обработка преподавателей
+    if (multiTeacher.checked) {
+        scheduleData.teachers = Array.from(selectedTeachersModal);
+        scheduleData.teacher_name = scheduleData.teachers[0]; // Основной преподаватель
+    } else {
+        scheduleData.rid = roomSingle.value.trim();
+    }
+
+    // Обработка аудиторий
+    if (multiRoom.checked) {
+        scheduleData.rooms = Array.from(selectedRoomsModal);
+        scheduleData.rid = scheduleData.rooms[0]; // Основная аудитория
+    } else {
+        scheduleData.rid = roomSingle.value.trim();
+    }
+
+    // Обработка групп
+    if (multiGroup.checked) {
+        scheduleData.groups = Array.from(selectedGroupsModal);
+        scheduleData.gid = scheduleData.groups[0]; // Основная группа
+    } else {
+        scheduleData.gid = groupSingle.value.trim();
+    }
+
+    // Валидация
+    if (!scheduleData.typeid || !scheduleData.cid) {
+        alert('Пожалуйста, заполните обязательные поля');
         return;
     }
 
@@ -1843,6 +2303,21 @@ tables.addEventListener('dblclick', (e) => {
     const list = (DATA[teacher]?.[iso] || []);
     const pair = list[index];
 
+    // ===== СБРАСЫВАЕМ СОСТОЯНИЯ =====
+    selectedTeachersModal.clear();
+    selectedRoomsModal.clear();
+    selectedGroupsModal.clear();
+    multiTeacher.checked = false;
+    multiRoom.checked = false;
+    multiGroup.checked = false;
+    toggleMultiMode('teacher');
+    toggleMultiMode('room');
+    toggleMultiMode('group');
+    updateBadge('teacher');
+    updateBadge('room');
+    updateBadge('group');
+    // ===== КОНЕЦ СБРОСА =====
+
     const getTypeId = (typeAlias) => {
         const found = LESSON_TYPES.find(item => item.alias === typeAlias);
         return found ? found.id : '';
@@ -1865,14 +2340,16 @@ tables.addEventListener('dblclick', (e) => {
 
     if (pair) {
         f_type.value = getTypeId(pair.type);
-        f_room.value = getRoomId(pair.room);
-        f_group.value = getGroupId(pair.group);
+        roomSingle.value = getRoomId(pair.room);
+        groupSingle.value = getGroupId(pair.group);
         f_course.value = getCourseId(pair.course);
+        f_lesson_num.value = pair.lesson_num || '';
     } else {
         f_type.value = '';
-        f_room.value = '';
-        f_group.value = '';
+        roomSingle.value = '';
+        groupSingle.value = '';
         f_course.value = '';
+        f_lesson_num.value = '';
     }
 
     btnDelete.style.display = pair && pair.schedule_id ? 'inline-flex' : 'none';
@@ -1915,7 +2392,7 @@ const loadScheduleData = async (teachers, month) => {
     if (teachers.length === 0) {
         DATA = {};
         // автоматический рендеринг
-        // await renderTable();
+        await renderTable();
         return;
     }
 
@@ -1942,8 +2419,8 @@ const renderTable = async () => {
 
     tables.innerHTML = '';
 
+
     if (!sel.length) {
-        // tables.innerHTML = '<p class="error">Выберите хотя бы одного преподавателя</p>';
         tables.innerHTML = '<div class="note" style="margin-top: 6px;">\n' +
             '    Выберите преподавателей и месяц, затем нажмите "Показать расписание"\n' +
             '</div>';
@@ -1993,10 +2470,10 @@ const render = () => {
 
     if (!monthVal) return;
     // Проверяем, есть ли выбранные преподаватели
-    if (sel.length === 0) {
-        tables.innerHTML = '<p class="error">Выберите хотя бы одного преподавателя</p>';
-        return;
-    }
+    // if (sel.length === 0) {
+    //     tables.innerHTML = '<p class="error">Выберите хотя бы одного преподавателя</p>';
+    //     return;
+    // }
     loadScheduleData(sel, monthVal);
 };
 
@@ -2802,27 +3279,59 @@ let currentRecType = 'math';
 
 // Функция для получения рекомендаций для преподавателя (через модальное окно)
 const loadPairRecommendations = async () => {
-    if (!ctx) {
-        showNotification('Сначала выберите ячейку для добавления пары', 'warning');
+    // Получаем ID преподавателя из ручного поля или из ctx
+    let teacherName, teacherId;
+
+    if (isManualAdd) {
+        teacherName = f_teacher.value;
+        if (!teacherName) {
+            showNotification('Сначала выберите преподавателя', 'warning');
+            return;
+        }
+        teacherId = TEACHERS_LIST[teacherName]?.id;
+    } else if (ctx) {
+        teacherName = ctx.teacher;
+        teacherId = TEACHERS_LIST[teacherName]?.id;
+    } else {
+        showNotification('Сначала выберите преподавателя', 'warning');
         return;
     }
 
-    const teacherId = TEACHERS_LIST[ctx.teacher]?.id;
     if (!teacherId) {
         showNotification('Не удалось определить ID преподавателя', 'error');
         return;
     }
 
     // Заполняем информацию о текущей паре
-    const hoursMap = ['1-2 пара', '3-4 пара', '5-6 пара', '7-8 пара'];
-    document.getElementById('editorRecTeacher').textContent = ctx.teacher;
-    document.getElementById('editorRecDate').textContent = ctx.iso;
-    document.getElementById('editorRecPeriod').textContent = hoursMap[ctx.index] || `Пара ${ctx.index + 1}`;
+    const hoursMap = ['1-2 час', '3-4 час', '5-6 час', '7-8 час'];
+    document.getElementById('editorRecTeacher').textContent = teacherName;
 
-    // Определяем день недели и период
-    const dateObj = new Date(ctx.iso);
-    const dayOfWeek = dateObj.getDay() === 0 ? 7 : dateObj.getDay();
-    const periodId = await getPeriodIdForDateTime(ctx.iso, ctx.index);
+    if (isManualAdd) {
+        document.getElementById('editorRecDate').textContent = f_date.value || 'Не выбрана';
+        const pairIndex = parseInt(f_pair.value);
+        document.getElementById('editorRecPeriod').textContent = !isNaN(pairIndex) ? hoursMap[pairIndex] : 'Не выбрана';
+    } else if (ctx) {
+        document.getElementById('editorRecDate').textContent = ctx.iso;
+        document.getElementById('editorRecPeriod').textContent = hoursMap[ctx.index] || `Час ${ctx.index + 1}`;
+    }
+
+    // Определяем день недели и период (используем значения по умолчанию если не выбраны)
+    let dayOfWeek, periodId;
+
+    if (isManualAdd && f_date.value) {
+        const dateObj = new Date(f_date.value);
+        dayOfWeek = dateObj.getDay() === 0 ? 7 : dateObj.getDay();
+        const pairIndex = parseInt(f_pair.value) || 0;
+        periodId = await getPeriodIdForDateTime(f_date.value, pairIndex);
+    } else if (ctx) {
+        const dateObj = new Date(ctx.iso);
+        dayOfWeek = dateObj.getDay() === 0 ? 7 : dateObj.getDay();
+        periodId = await getPeriodIdForDateTime(ctx.iso, ctx.index);
+    } else {
+        // Значения по умолчанию
+        dayOfWeek = 1; // Понедельник
+        periodId = 112; // Первая пара
+    }
 
     // Показываем модальное окно
     const modal = document.getElementById('editorRecModal');
@@ -2860,21 +3369,17 @@ const loadPairRecommendations = async () => {
                 if (list) list.style.display = 'block';
             } else {
                 if (empty) {
-                    const emptyText = empty.querySelector('.empty-text');
-                    const emptyHint = empty.querySelector('.empty-hint');
-                    if (emptyText) emptyText.textContent = 'Нет рекомендаций';
-                    if (emptyHint) emptyHint.textContent = currentRecType === 'math'
-                        ? 'У преподавателя пока нет истории занятий для математического анализа'
+                    empty.querySelector('.empty-text').textContent = 'Нет рекомендаций';
+                    empty.querySelector('.empty-hint').textContent = currentRecType === 'math'
+                        ? 'У преподавателя пока нет истории занятий'
                         : 'Недостаточно данных для ИИ рекомендаций';
                     empty.style.display = 'block';
                 }
             }
         } else {
             if (empty) {
-                const emptyText = empty.querySelector('.empty-text');
-                const emptyHint = empty.querySelector('.empty-hint');
-                if (emptyText) emptyText.textContent = 'Ошибка';
-                if (emptyHint) emptyHint.textContent = data.error || 'Не удалось получить рекомендации';
+                empty.querySelector('.empty-text').textContent = 'Ошибка';
+                empty.querySelector('.empty-hint').textContent = data.error || 'Не удалось получить рекомендации';
                 empty.style.display = 'block';
             }
         }
@@ -2882,10 +3387,8 @@ const loadPairRecommendations = async () => {
         console.error('Error loading recommendations:', error);
         if (loading) loading.style.display = 'none';
         if (empty) {
-            const emptyText = empty.querySelector('.empty-text');
-            const emptyHint = empty.querySelector('.empty-hint');
-            if (emptyText) emptyText.textContent = 'Ошибка соединения';
-            if (emptyHint) emptyHint.textContent = error.message;
+            empty.querySelector('.empty-text').textContent = 'Ошибка соединения';
+            empty.querySelector('.empty-hint').textContent = error.message;
             empty.style.display = 'block';
         }
     }
@@ -2956,14 +3459,15 @@ const applyRecommendationAndClose = async (courseId, groupId, typeId) => {
 
     if (course) {
         f_course.value = courseId;
+        // Триггерим событие change для возможных обработчиков
         const event = new Event('change', { bubbles: true });
         f_course.dispatchEvent(event);
     }
 
     if (group) {
-        f_group.value = groupId;
+        groupSingle.value = groupId;  // Было f_group, стало groupSingle
         const event = new Event('change', { bubbles: true });
-        f_group.dispatchEvent(event);
+        groupSingle.dispatchEvent(event);
     }
 
     if (lessonType) {
@@ -2975,7 +3479,7 @@ const applyRecommendationAndClose = async (courseId, groupId, typeId) => {
     // Закрываем модальное окно
     closeEditorRecModal();
 
-    showNotification(`Рекомендация применена!`, 'success');
+    showNotification('Рекомендация применена!', 'success');
 };
 
 // Закрытие модального окна рекомендаций
@@ -3080,6 +3584,129 @@ const escapeHtml = (str) => {
         .replace(/'/g, '&#39;');
 };
 
+// Загрузка кандидатов для слота
+const loadCandidates = async () => {
+    const date = isManualAdd ? f_date.value : (ctx ? ctx.iso : '');
+    const pairIndex = isManualAdd ? f_pair.value : (ctx ? ctx.index : '');
+    const groupId = groupSingle.value;
+    const courseId = f_course.value;
+
+    if (!date || pairIndex === '' || !groupId || !courseId) {
+        showNotification('Заполните дату, пару, группу и дисциплину', 'warning');
+        return;
+    }
+
+    // Показываем панель и загрузку
+    if (candidatesPanel) candidatesPanel.style.display = 'block';
+    if (candidatesLoading) candidatesLoading.style.display = 'flex';
+    if (candidatesBusyList) candidatesBusyList.innerHTML = '';
+    if (candidatesFreeExpList) candidatesFreeExpList.innerHTML = '';
+    if (candidatesFreeOtherList) candidatesFreeOtherList.innerHTML = '';
+    if (candidatesEmpty) candidatesEmpty.style.display = 'none';
+
+    try {
+        const course = DISCIPLINES.find(c => c.id == courseId);
+
+        const response = await fetch('/api/getCandidatesForSlot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                date: date,
+                pair_index: parseInt(pairIndex || 0),
+                group_id: parseInt(groupId),
+                course_id: parseInt(courseId),
+                course_alias: course?.alias || ''
+            })
+        });
+
+        const data = await response.json();
+
+        if (candidatesLoading) candidatesLoading.style.display = 'none';
+
+        if (data.success) {
+            // Занятые преподаватели
+            if (candidatesBusyList) {
+                if (data.busy_teachers.length > 0) {
+                    candidatesBusyList.innerHTML = data.busy_teachers.map(t => `
+                        <div class="candidate-item busy">
+                            <span class="candidate-dot" style="background: #ef4444;"></span>
+                            <div class="candidate-info">
+                                <span class="candidate-name">${t.name}</span>
+                                <span class="candidate-meta">${t.lesson_type} | ${t.course} | ${t.group}</span>
+                            </div>
+                            <span class="candidate-badge busy">Занят</span>
+                        </div>
+                    `).join('');
+                } else {
+                    candidatesBusyList.innerHTML = '<div class="candidate-empty-note">Нет занятых</div>';
+                }
+            }
+
+            // Свободные с опытом
+            if (candidatesFreeExpList) {
+                if (data.free_teachers.experienced.length > 0) {
+                    candidatesFreeExpList.innerHTML = data.free_teachers.experienced.map(t => `
+                        <div class="candidate-item free recommended" onclick="selectCandidate('${t.name}', '${t.id}')">
+                            <span class="candidate-dot" style="background: #10b981;"></span>
+                            <div class="candidate-info">
+                                <span class="candidate-name">${t.name}</span>
+                                <span class="candidate-meta">
+                                    ${t.degree ? t.degree + ' | ' : ''}ПКМ ${t.pmk || '?'}
+                                    ${t.experience ? ` | Вел ${t.experience.total} раз(а)` : ''}
+                                    ${t.experience?.same_group ? ` (с этой группой: ${t.experience.same_group})` : ''}
+                                </span>
+                            </div>
+                            <span class="candidate-badge free">✓ Свободен</span>
+                        </div>
+                    `).join('');
+                } else {
+                    candidatesFreeExpList.innerHTML = '<div class="candidate-empty-note">Нет свободных с опытом</div>';
+                }
+            }
+
+            // Свободные без опыта
+            if (candidatesFreeOtherList) {
+                if (data.free_teachers.unexperienced.length > 0) {
+                    candidatesFreeOtherList.innerHTML = data.free_teachers.unexperienced.slice(0, 10).map(t => `
+                        <div class="candidate-item free" onclick="selectCandidate('${t.name}', '${t.id}')">
+                            <span class="candidate-dot" style="background: #f59e0b;"></span>
+                            <div class="candidate-info">
+                                <span class="candidate-name">${t.name}</span>
+                                <span class="candidate-meta">
+                                    ${t.degree ? t.degree + ' | ' : ''}ПКМ ${t.pmk || '?'}
+                                </span>
+                            </div>
+                            <span class="candidate-badge free">✓ Свободен</span>
+                        </div>
+                    `).join('');
+                } else {
+                    candidatesFreeOtherList.innerHTML = '<div class="candidate-empty-note">Нет других свободных</div>';
+                }
+            }
+        } else {
+            if (candidatesEmpty) {
+                candidatesEmpty.style.display = 'block';
+                candidatesEmpty.querySelector('.empty-text').textContent = 'Ошибка';
+                candidatesEmpty.querySelector('.empty-hint').textContent = data.error || 'Не удалось загрузить';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading candidates:', error);
+        if (candidatesLoading) candidatesLoading.style.display = 'none';
+        if (candidatesEmpty) candidatesEmpty.style.display = 'block';
+    }
+};
+
+// Выбор кандидата
+const selectCandidate = (name, id) => {
+    if (isManualAdd) {
+        f_teacher.value = name;
+    } else {
+        teacherSingle.value = name;
+    }
+    showNotification(`Выбран: ${name}`, 'success');
+};
+
 /* ===== Инициализация ===== */
 const init = async () => {
     try {
@@ -3096,6 +3723,7 @@ const init = async () => {
             adminInfo.style.display = 'none';
             userInfo.style.display = 'block';
             switchModeBtn.style.display = 'none';
+            if (addScheduleBtn) addScheduleBtn.style.display = 'none';
             // adminStatusText.textContent = 'Для редактирования расписания войдите как администратор.';
         }
 
@@ -3103,7 +3731,7 @@ const init = async () => {
         await loadModalData();
 
         initDateSelectors();
-        // await render();
+        await render();
         updateNavDisabled();
         // Добавляем обработчик Escape для отмены режима замены
         window.addEventListener('keydown', (e) => {
@@ -3137,3 +3765,314 @@ const clearColorCache = () => {
 
 // Запуск приложения
 init()
+
+// ===== ГОРЯЧИЕ КЛАВИШИ ДЛЯ КОПИРОВАНИЯ/ВСТАВКИ/ВЫРЕЗАНИЯ ПАР =====
+
+// Хранилище для скопированной пары
+let copiedPair = null;
+let cutPair = null; // Для вырезания (с последующим удалением)
+
+// Функция получения данных пары из ячейки
+const getPairDataFromCell = (td) => {
+    const teacher = td.dataset.teacher;
+    const iso = td.dataset.date;
+    const index = Number(td.dataset.index);
+    const scheduleId = td.dataset.scheduleId;
+
+    if (!teacher || !iso) return null;
+
+    const pair = DATA[teacher]?.[iso]?.[index];
+    if (!pair) return null;
+
+    // Для typeid: если нет числового ID, ищем по алиасу
+    let typeId = pair.typeid || '';
+    if (!typeId && pair.type) {
+        const found = LESSON_TYPES.find(t => t.alias === pair.type || t.id == pair.type);
+        typeId = found ? found.id : '';
+    }
+
+    // rid, gid, cid уже числовые - используем как есть
+    const roomId = pair.rid || '';
+    const groupId = pair.gid || '';
+    const courseId = pair.cid || '';
+
+    // Преобразуем названия комнат в ID для массива rooms
+    const roomIds = (pair.rooms || []).map(r => {
+        // Если это уже число - возвращаем
+        if (!isNaN(Number(r))) return Number(r);
+        // Ищем по названию
+        const found = CLASSROOMS.find(c => c.short_name === r || c.id == r);
+        return found ? found.id : r;
+    });
+
+    // Преобразуем имена преподавателей (оставляем как есть - это строки)
+    const teacherNames = pair.teachers || [];
+
+    // Преобразуем названия групп в ID
+    const groupIds = (pair.groups || []).map(g => {
+        if (!isNaN(Number(g))) return Number(g);
+        const found = GROUPS.find(gr => gr.name === g || gr.id == g);
+        return found ? found.id : g;
+    });
+
+    console.log('Final IDs:', { typeId, roomId, groupId, courseId });
+    console.log('Arrays - rooms:', roomIds, 'groups:', groupIds);
+
+    return {
+        teacher,
+        iso,
+        index,
+        scheduleId,
+        pairData: { ...pair },
+        teacher_mid: pair.teacher_mid || '',
+        period: pair.period || '',
+        cid: courseId,
+        rid: roomId,
+        gid: groupId,
+        typeid: typeId,
+        lesson_num: pair.lesson_num || null,
+        teachers: teacherNames,
+        rooms: roomIds,    // Теперь это массив числовых ID
+        groups: groupIds   // Теперь это массив числовых ID
+    };
+};
+
+// Функция вставки пары в ячейку
+const pastePairToCell = async (td, pairInfo) => {
+    if (!isAdminMode()) {
+        showNotification('Копирование/вставка доступны только в режиме администратора', 'warning');
+        return;
+    }
+
+    const teacher = td.dataset.teacher;
+    const iso = td.dataset.date;
+    const index = Number(td.dataset.index);
+
+    // Проверяем, нет ли уже пары в этой ячейке
+    const existingPair = DATA[teacher]?.[iso]?.[index];
+    if (existingPair && existingPair.schedule_id) {
+        if (!confirm(`В ячейке уже есть пара. Заменить её?`)) {
+            return;
+        }
+    }
+
+    const scheduleData = {
+        teacher_name: teacher,
+        teacher_mid: pairInfo.teacher_mid || '',
+        period: pairInfo.period || '',
+        date: iso,
+        pair_index: index,
+        typeid: pairInfo.typeid || '',
+        rid: pairInfo.rid || '',
+        gid: pairInfo.gid || '',
+        cid: pairInfo.cid || '',
+        lesson_num: pairInfo.lesson_num || null,
+        teachers: pairInfo.teachers || [],
+        rooms: pairInfo.rooms || [],
+        groups: pairInfo.groups || []
+    };
+
+    console.log('Pasting scheduleData:', scheduleData);
+
+    // Валидация
+    if (!scheduleData.typeid || !scheduleData.rid || !scheduleData.gid || !scheduleData.cid) {
+        showNotification('Ошибка: не удалось определить ID для всех полей.', 'error');
+        console.error('Missing IDs:', {
+            typeid: scheduleData.typeid,
+            rid: scheduleData.rid,
+            gid: scheduleData.gid,
+            cid: scheduleData.cid
+        });
+        return;
+    }
+
+    try {
+        saveScrollPosition();
+
+        let result;
+        if (existingPair && existingPair.schedule_id) {
+            scheduleData.schedule_id = existingPair.schedule_id;
+            result = await updateSchedule(scheduleData);
+        } else {
+            result = await postSchedule(scheduleData);
+        }
+
+        if (result.success) {
+            showNotification('Пара успешно вставлена', 'success');
+
+            const selectedTeachers = getSelectedTeachers();
+            const monthVal = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+            await loadScheduleData(selectedTeachers, monthVal);
+        } else {
+            showNotification('Ошибка при вставке: ' + (result.error || 'Неизвестная ошибка'), 'error');
+        }
+    } catch (error) {
+        showNotification('Ошибка при вставке: ' + error.message, 'error');
+    }
+};
+
+// Функция удаления пары из ячейки
+const deletePairFromCell = async (td) => {
+    if (!isAdminMode()) {
+        showNotification('Удаление доступно только в режиме администратора', 'warning');
+        return;
+    }
+
+    const scheduleId = td.dataset.scheduleId;
+    if (!scheduleId) {
+        showNotification('В этой ячейке нет пары для удаления', 'warning');
+        return;
+    }
+
+    if (!confirm('Вы уверены, что хотите удалить эту пару?')) {
+        return;
+    }
+
+    try {
+        saveScrollPosition();
+        await deleteSchedule(scheduleId);
+
+        showNotification('Пара успешно удалена', 'success');
+
+        // Обновляем данные
+        const selectedTeachers = getSelectedTeachers();
+        const monthVal = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+        await loadScheduleData(selectedTeachers, monthVal);
+    } catch (error) {
+        showNotification('Ошибка при удалении: ' + error.message, 'error');
+    }
+};
+
+// Отслеживание выбранной ячейки
+let selectedCell = null;
+
+// Выделение ячейки
+const selectCell = (td) => {
+    // Снимаем выделение с предыдущей ячейки
+    if (selectedCell) {
+        selectedCell.classList.remove('cell-selected');
+    }
+
+    // Выделяем новую ячейку
+    td.classList.add('cell-selected');
+    selectedCell = td;
+};
+
+// Обработчик клика для выделения ячейки
+tables.addEventListener('click', (e) => {
+    const td = e.target.closest('td');
+    if (!td || !td.dataset.teacher) return;
+
+    // Не выделяем, если это режим замены (там своя логика)
+    if (swapMode) return;
+
+    selectCell(td);
+});
+
+// Обработчик горячих клавиш
+document.addEventListener('keydown', async (e) => {
+    // Проверяем, что фокус не на поле ввода
+    const activeElement = document.activeElement;
+    const isInputFocused = activeElement && (
+        activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        activeElement.tagName === 'SELECT' ||
+        activeElement.isContentEditable
+    );
+
+    // Не обрабатываем, если фокус на поле ввода (кроме случаев копирования из ячейки)
+    if (isInputFocused) return;
+
+    // Ctrl+C - Копировать
+    if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        e.preventDefault();
+
+        if (!selectedCell) {
+            showNotification('Сначала выберите ячейку с парой (кликните по ней)', 'warning');
+            return;
+        }
+
+        copiedPair = getPairDataFromCell(selectedCell);
+        cutPair = null; // Сбрасываем вырезание
+
+        if (copiedPair) {
+            showNotification('Пара скопирована (Ctrl+V для вставки)', 'success');
+            // Визуальная индикация
+            selectedCell.classList.add('cell-copied');
+            setTimeout(() => selectedCell.classList.remove('cell-copied'), 1000);
+        } else {
+            showNotification('В выбранной ячейке нет пары', 'warning');
+        }
+    }
+
+    // Ctrl+X - Вырезать
+    if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
+        e.preventDefault();
+
+        if (!selectedCell) {
+            showNotification('Сначала выберите ячейку с парой (кликните по ней)', 'warning');
+            return;
+        }
+
+        cutPair = getPairDataFromCell(selectedCell);
+        copiedPair = null; // Сбрасываем копирование
+
+        if (cutPair) {
+            showNotification('Пара вырезана (Ctrl+V для вставки). Исходная пара будет удалена после вставки.', 'info');
+            // Визуальная индикация
+            selectedCell.classList.add('cell-cut');
+            setTimeout(() => selectedCell.classList.remove('cell-cut'), 2000);
+        } else {
+            showNotification('В выбранной ячейке нет пары', 'warning');
+        }
+    }
+
+    // Ctrl+V - Вставить
+    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        e.preventDefault();
+
+        const pairToPaste = copiedPair || cutPair;
+
+        if (!pairToPaste) {
+            showNotification('Нет скопированной пары. Сначала скопируйте (Ctrl+C) или вырежьте (Ctrl+X) пару.', 'warning');
+            return;
+        }
+
+        if (!selectedCell) {
+            showNotification('Сначала выберите ячейку для вставки (кликните по ней)', 'warning');
+            return;
+        }
+
+        // Вставляем пару
+        await pastePairToCell(selectedCell, pairToPaste);
+
+        // Если это было вырезание - удаляем исходную пару
+        if (cutPair && cutPair.scheduleId) {
+            try {
+                await deleteSchedule(cutPair.scheduleId);
+                showNotification('Исходная пара удалена', 'info');
+
+                // Обновляем данные
+                const selectedTeachers = getSelectedTeachers();
+                const monthVal = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+                await loadScheduleData(selectedTeachers, monthVal);
+            } catch (error) {
+                console.error('Error deleting cut pair:', error);
+            }
+        }
+
+        // Сбрасываем буфер обмена
+        copiedPair = null;
+        cutPair = null;
+    }
+
+    // Delete - Удалить пару
+    if (e.key === 'Delete' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (!selectedCell) return;
+
+        e.preventDefault();
+        await deletePairFromCell(selectedCell);
+    }
+});
+
+// Добавьте стили для визуальной индикации в sh.css

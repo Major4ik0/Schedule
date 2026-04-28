@@ -49,7 +49,7 @@ def get_schedules():
 
 
 def _build_schedule_query():
-    """Строит SQL запрос для расписания"""
+    """Строит SQL запрос для расписания с агрегацией множественных значений"""
     return """
     WITH schedule_variants AS (
         SELECT 
@@ -71,25 +71,64 @@ def _build_schedule_query():
             (EXTRACT(YEAR FROM sv.week_start_date) = %s AND EXTRACT(MONTH FROM sv.week_start_date) = %s)
             OR (EXTRACT(YEAR FROM sv.week_start_date + INTERVAL '6 days') = %s AND EXTRACT(MONTH FROM sv.week_start_date + INTERVAL '6 days') = %s)
         )
+    ),
+    -- Получаем всех преподавателей для каждой записи
+    schedule_with_teachers AS (
+        SELECT 
+            nnz_s.sheid,
+            array_agg(DISTINCT p.lastname || ' ' || p.firstname || ' ' || p.patronymic) AS all_teachers,
+            array_agg(DISTINCT p.mid) AS all_teacher_mids
+        FROM filtered_variants fv
+        JOIN nnz_schedule nnz_s ON nnz_s.sh_var_id = fv.sh_var_id
+        JOIN people p ON p.mid = ANY(nnz_s.teacher_mid)
+        GROUP BY nnz_s.sheid
+    ),
+    -- Получаем все аудитории для каждой записи
+    schedule_with_rooms AS (
+        SELECT 
+            nnz_s.sheid,
+            array_agg(DISTINCT COALESCE(r.short_name, 'Ауд. не указана')) AS all_rooms,
+            array_agg(DISTINCT r.rid) AS all_rids
+        FROM filtered_variants fv
+        JOIN nnz_schedule nnz_s ON nnz_s.sh_var_id = fv.sh_var_id
+        LEFT JOIN rooms r ON r.rid = ANY(nnz_s.rid)
+        GROUP BY nnz_s.sheid
     )
     SELECT 
-        p.lastname || ' ' || p.firstname || ' ' || p.patronymic AS teacher_name,
+        p_main.lastname || ' ' || p_main.firstname || ' ' || p_main.patronymic AS teacher_name,
         TO_CHAR(fv.week_start_date + (nnz_s.day_of_week - 1) * INTERVAL '1 day', 'YYYY-MM-DD') AS event_date,
-        pr.name AS period_name, crs.alias AS course_name,
-        COALESCE(r.short_name, 'Ауд. не указана') AS room_name,
-        e.alias AS event_type, g.name AS group_name,
-        nnz_s.sheid AS schedule_id, fv.sh_var_name,
-        nnz_s.day_of_week, p.mid as teacher_mid,
-        g.gid, crs.cid, r.rid, pr.lid, nnz_s.idcathedra, fv.week_start_date
+        pr.name AS period_name, 
+        crs.alias AS course_name,
+        COALESCE(r_main.short_name, 'Ауд. не указана') AS room_name,
+        e.alias AS event_type, 
+        g_main.name AS group_name,
+        nnz_s.sheid AS schedule_id, 
+        fv.sh_var_name,
+        nnz_s.day_of_week, 
+        p_main.mid as teacher_mid,
+        g_main.gid, 
+        crs.cid, 
+        r_main.rid, 
+        pr.lid, 
+        nnz_s.idcathedra, 
+        nnz_s.lesson_num, 
+        fv.week_start_date,
+        -- Массивы всех значений
+        COALESCE(swt.all_teachers, ARRAY[]::text[]) AS all_teachers,
+        COALESCE(swt.all_teacher_mids, ARRAY[]::integer[]) AS all_teacher_mids,
+        COALESCE(swr.all_rooms, ARRAY[]::text[]) AS all_rooms,
+        COALESCE(swr.all_rids, ARRAY[]::integer[]) AS all_rids
     FROM filtered_variants fv
     JOIN nnz_schedule nnz_s ON nnz_s.sh_var_id = fv.sh_var_id
-    JOIN people p ON p.mid = ANY(nnz_s.teacher_mid)
+    JOIN people p_main ON p_main.mid = nnz_s.teacher_mid[1]  -- Основной преподаватель (первый в массиве)
     JOIN courses crs ON crs.cid = nnz_s.cid
-    LEFT JOIN rooms r ON r.rid = ANY(nnz_s.rid)
+    LEFT JOIN rooms r_main ON r_main.rid = nnz_s.rid[1]  -- Основная аудитория (первая в массиве)
     JOIN eventtools e ON nnz_s.pair_type_id = e.typeid
-    JOIN groupname g ON nnz_s.gid = g.gid
+    JOIN groupname g_main ON nnz_s.gid = g_main.gid
     JOIN periods pr ON nnz_s.period = pr.lid
-    WHERE p.mid = ANY(%s)
+    LEFT JOIN schedule_with_teachers swt ON swt.sheid = nnz_s.sheid
+    LEFT JOIN schedule_with_rooms swr ON swr.sheid = nnz_s.sheid
+    WHERE p_main.mid = ANY(%s)
     AND fv.week_start_date + (nnz_s.day_of_week - 1) * INTERVAL '1 day' BETWEEN %s AND %s
     ORDER BY event_date, period_name
     """
@@ -104,19 +143,41 @@ def post_schedule():
     data = request.get_json()
 
     try:
-        # Получаем ID всех сущностей
-        teacher_mid = EntityDAO.get_id(db, 'people', 'mid',
-                                       "lastname || ' ' || firstname || ' ' || patronymic",
-                                       data['teacher_name'], 'Teacher')
+        # Получаем массивы преподавателей
+        if 'teachers' in data and data['teachers']:
+            teacher_mids = []
+            for name in data['teachers']:
+                mid = TeacherDAO.get_by_full_name(db, name)
+                if mid:
+                    teacher_mids.append(mid)
+            if not teacher_mids:
+                teacher_mids = [EntityDAO.get_id(db, 'people', 'mid',
+                                                 "lastname || ' ' || firstname || ' ' || patronymic",
+                                                 data['teacher_name'], 'Teacher')]
+        else:
+            teacher_mids = [EntityDAO.get_id(db, 'people', 'mid',
+                                             "lastname || ' ' || firstname || ' ' || patronymic",
+                                             data['teacher_name'], 'Teacher')]
 
-        # ВАЖНО: преобразуем rid в целое число, а не строку
-        rid = int(data['rid'])  # Преобразуем в int
-        gid = int(data['gid'])  # Преобразуем в int
-        cid = int(data['cid'])  # Преобразуем в int
-        pair_type_id = int(data['typeid'])  # Преобразуем в int
+        # Получаем массивы аудиторий
+        if 'rooms' in data and data['rooms']:
+            rids = [int(r) for r in data['rooms']]
+        else:
+            rids = [int(data['rid'])]
 
-        # Получаем кафедру преподавателя
-        idcathedra = TeacherDAO.get_cathedra(db, teacher_mid)
+        # Получаем массивы групп (ВАЖНО: gid ожидает одно число, используем первое)
+        if 'groups' in data and data['groups']:
+            gids_array = [int(g) for g in data['groups']]
+            gid = gids_array[0]  # Берем первую группу как основную
+        else:
+            gid = int(data['gid'])
+
+        cid = int(data['cid'])
+        pair_type_id = int(data['typeid'])
+        lesson_num = int(data['lesson_num']) if data.get('lesson_num') else None
+
+        # Получаем кафедру (от первого преподавателя)
+        idcathedra = TeacherDAO.get_cathedra(db, teacher_mids[0])
 
         # Получаем вариант расписания
         date_obj = datetime.strptime(data['date'], '%Y-%m-%d')
@@ -133,43 +194,18 @@ def post_schedule():
         if not sh_var_id:
             return jsonify({'error': 'No schedule variant found'}), 404
 
-        # Получаем период
         period_id = PeriodDAO.get_by_pair_index(db, s_year_id, int(data['pair_index']))
 
-        # ВАЖНО: создаем массивы целых чисел, а не строк
-        rid_array = [rid]  # Список целых чисел
-        teacher_mid_array = [teacher_mid]  # Список целых чисел
-
-        # Вставляем запись
+        # Вставляем запись: gid как ОДНО число, rid и teacher_mid как массивы
         result = db.execute_returning("""
-            INSERT INTO nnz_schedule (cid, rid, gid, teacher_mid, sh_var_id, period, day_of_week, pair_type_id, idcathedra)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING sheid
+            INSERT INTO nnz_schedule (cid, rid, gid, teacher_mid, sh_var_id, period, day_of_week, pair_type_id, idcathedra, lesson_num)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING sheid
         """, (
-            cid, rid_array, gid, teacher_mid_array,
-            sh_var_id, period_id, date_obj.isoweekday(), pair_type_id, idcathedra
+            cid, rids, gid, teacher_mids,  # gid - одно число
+            sh_var_id, period_id, date_obj.isoweekday(), pair_type_id, idcathedra, lesson_num
         ))
 
         if result and 'sheid' in result:
-            # Отправляем фидбек для обучения ИИ
-            try:
-                from ai_model.ml_recommender import add_feedback_to_recommender
-                feedback_input = {
-                    'cid': cid,
-                    'gid': gid,
-                    'pair_type_id': pair_type_id,
-                    'period': period_id,
-                    'day_of_week': date_obj.isoweekday(),
-                    'idcathedra': idcathedra,
-                    # Дополнительные поля для текстового описания
-                    'course_alias': data.get('course_alias', ''),
-                    'course_title': data.get('course_title', ''),
-                    'group_name': data.get('group_name', ''),
-                    'event_type': data.get('event_type', ''),
-                    'period_name': data.get('period_name', '')
-                }
-                add_feedback_to_recommender(feedback_input, teacher_mid)
-            except Exception as e:
-                print(f"Feedback error (non-critical): {e}")
             return jsonify({
                 'success': True,
                 'schedule_id': result['sheid'],
@@ -245,7 +281,8 @@ def _build_update_fields(data):
     field_mapping = {
         'cid': ('cid', int),
         'gid': ('gid', int),
-        'typeid': ('pair_type_id', int)
+        'typeid': ('pair_type_id', int),
+        'lesson_num': ('lesson_num', int)
     }
 
     for field, (db_field, converter) in field_mapping.items():

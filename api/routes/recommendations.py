@@ -616,3 +616,206 @@ def get_pair_recommendations_for_teacher():
             'ai_count': len(ai_recommendations)
         }
     })
+
+
+@api_bp.route('/getCandidatesForSlot', methods=['POST'])
+@handle_db_errors
+def get_candidates_for_slot():
+    """
+    Поиск преподавателей для заданного слота (дата + пара + группа + дисциплина)
+    Показывает:
+    - Занятых преподавателей (уже есть пара в это время)
+    - Свободных преподавателей, которые могут вести эту дисциплину
+    - Свободных преподавателей, которые не вели эту дисциплину, но могут
+    """
+    data = request.get_json()
+    date_str = data.get('date')  # YYYY-MM-DD
+    pair_index = data.get('pair_index', 0)  # 0-3
+    group_id = data.get('group_id')
+    course_id = data.get('course_id')
+    course_alias = data.get('course_alias')
+    cathedra_id = data.get('cathedra_id')
+
+    if not date_str:
+        return jsonify({'success': False, 'error': 'Не указана дата'}), 400
+
+    db = DataBase()
+
+    # Определяем день недели и период
+    date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+    day_of_week = date_obj.isoweekday()  # 1-7
+
+    # Определяем учебный год
+    from api.utils.helpers import get_academic_year_info
+    from api.utils.database import ScheduleDAO, PeriodDAO
+
+    year_info = get_academic_year_info(date_obj)
+    s_year_id = ScheduleDAO.get_study_year_by_date(db, date_obj)
+
+    if not s_year_id:
+        return jsonify({'success': False, 'error': 'Не удалось определить учебный год'}), 404
+
+    # Получаем ID периода
+    period_id = PeriodDAO.get_by_pair_index(db, s_year_id, pair_index)
+
+    # Получаем ID кафедры из группы, если не указан
+    if not cathedra_id and group_id:
+        group_info = db.fetchone("SELECT idcathedra FROM groupname WHERE gid = %s", (group_id,))
+        if group_info:
+            cathedra_id = group_info['idcathedra']
+
+    # Получаем вариант расписания для даты
+    sh_var_id = None
+    sh_var_query = """
+    WITH schedule_variants AS (
+        SELECT 
+            sh_var_id,
+            CASE 
+                WHEN sh_var_name ~ '^Неделя\\s+\\d+\\s+\\(' THEN
+                    TO_DATE(TRIM(SPLIT_PART(SPLIT_PART(sh_var_name, '(', 2), '-', 1)), 'DD.MM.YYYY')
+                ELSE NULL
+            END as week_start_date
+        FROM nnz_schedule_variants 
+        WHERE s_year_id = %s AND sh_var_name IS NOT NULL
+    )
+    SELECT sh_var_id FROM schedule_variants
+    WHERE week_start_date IS NOT NULL
+      AND %s BETWEEN week_start_date AND week_start_date + INTERVAL '6 days'
+    LIMIT 1
+    """
+    result = db.fetchone(sh_var_query, (s_year_id, date_obj.date()))
+    if result:
+        sh_var_id = result['sh_var_id']
+
+    # 1. Находим занятых преподавателей (уже есть пара в это время)
+    busy_teachers = []
+    if sh_var_id:
+        busy_query = """
+        SELECT DISTINCT
+            p.mid,
+            p.lastname || ' ' || p.firstname || ' ' || p.patronymic AS full_name,
+            et.alias as lesson_type,
+            cr.alias as course_name,
+            gn.name as group_name,
+            ns.sheid as schedule_id
+        FROM nnz_schedule ns
+        JOIN people p ON p.mid = ANY(ns.teacher_mid)
+        JOIN eventtools et ON ns.pair_type_id = et.typeid
+        JOIN courses cr ON ns.cid = cr.cid
+        JOIN groupname gn ON ns.gid = gn.gid
+        WHERE ns.sh_var_id = %s
+          AND ns.period = %s
+          AND ns.day_of_week = %s
+        """
+        busy_teachers = db.fetchall(busy_query, (sh_var_id, period_id, day_of_week))
+
+    # 2. Находим преподавателей, которые могут вести эту дисциплину (имеют опыт)
+    experienced_teachers = []
+    if course_id or course_alias:
+        course_ids = []
+        if course_id:
+            course_ids.append(course_id)
+        if course_alias:
+            alias_courses = db.fetchall("SELECT cid FROM courses WHERE alias = %s", (course_alias,))
+            course_ids.extend(c['cid'] for c in alias_courses)
+
+        if course_ids:
+            exp_query = """
+            SELECT DISTINCT
+                p.mid,
+                p.lastname || ' ' || p.firstname || ' ' || p.patronymic AS full_name,
+                ad.shortname as degree_short,
+                cp.id_pmk,
+                COUNT(*) as total_count,
+                COUNT(CASE WHEN ns.gid = %s THEN 1 END) as same_group_count
+            FROM nnz_schedule ns
+            JOIN people p ON p.mid = ANY(ns.teacher_mid)
+            LEFT JOIN academicdegree ad ON p.degree = ad.agid
+            JOIN cathedra_personnel cp ON p.mid = cp.mid
+            WHERE ns.cid = ANY(%s)
+            """
+            params = [group_id or -1, course_ids]
+
+            if cathedra_id:
+                exp_query += " AND ns.idcathedra = %s"
+                params.append(cathedra_id)
+
+            exp_query += """
+            GROUP BY p.mid, p.lastname, p.firstname, p.patronymic, 
+                     ad.shortname, cp.id_pmk
+            ORDER BY total_count DESC
+            LIMIT 30
+            """
+            experienced_teachers = db.fetchall(exp_query, tuple(params))
+
+    # 3. Находим всех преподавателей кафедры (потенциальные кандидаты)
+    all_cathedra_teachers = []
+    if cathedra_id:
+        cathedra_query = """
+        SELECT DISTINCT
+            p.mid,
+            p.lastname || ' ' || p.firstname || ' ' || p.patronymic AS full_name,
+            ad.shortname as degree_short,
+            cp.id_pmk
+        FROM cathedra_personnel cp
+        JOIN people p ON p.mid = cp.mid
+        LEFT JOIN academicdegree ad ON p.degree = ad.agid
+        WHERE cp.cid = %s AND cp.id_pmk IN (1, 2)
+        ORDER BY p.lastname, p.firstname
+        """
+        all_cathedra_teachers = db.fetchall(cathedra_query, (cathedra_id,))
+
+    # Формируем результат
+    busy_ids = {t['mid'] for t in busy_teachers}
+    experienced_ids = {t['mid'] for t in experienced_teachers}
+
+    # Свободные = все преподаватели кафедры минус занятые
+    free_teachers = []
+    free_experienced = []
+    free_unexperienced = []
+
+    for teacher in all_cathedra_teachers:
+        if teacher['mid'] not in busy_ids:
+            teacher_info = {
+                'id': teacher['mid'],
+                'name': teacher['full_name'],
+                'degree': teacher['degree_short'],
+                'pmk': teacher['id_pmk']
+            }
+
+            if teacher['mid'] in experienced_ids:
+                # Найдем его статистику
+                exp = next((t for t in experienced_teachers if t['mid'] == teacher['mid']), None)
+                teacher_info['experience'] = {
+                    'total': exp['total_count'] if exp else 0,
+                    'same_group': exp['same_group_count'] if exp else 0
+                }
+                free_experienced.append(teacher_info)
+            else:
+                free_unexperienced.append(teacher_info)
+
+    return jsonify({
+        'success': True,
+        'slot_info': {
+            'date': date_str,
+            'day_of_week': day_of_week,
+            'pair_index': pair_index,
+            'period_id': period_id,
+            'course_id': course_id,
+            'group_id': group_id,
+            'cathedra_id': cathedra_id
+        },
+        'busy_teachers': [{
+            'id': t['mid'],
+            'name': t['full_name'],
+            'lesson_type': t['lesson_type'],
+            'course': t['course_name'],
+            'group': t['group_name'],
+            'schedule_id': t['schedule_id']
+        } for t in busy_teachers],
+        'free_teachers': {
+            'experienced': free_experienced,
+            'unexperienced': free_unexperienced,
+            'total_free': len(free_experienced) + len(free_unexperienced)
+        }
+    })

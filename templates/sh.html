@@ -94,6 +94,7 @@
 
         <div class="actions">
             <button class="btn primary" id="build">Показать расписание</button>
+            <button class="btn primary" id="addSchedule" style="background: linear-gradient(180deg, #22c55e, #16a34a);">Добавить расписание</button>
             <button class="btn ghost" id="switchMode">Режим замены</button>
             <button class="btn ghost export" id="print">Печать</button>
         </div>
@@ -123,176 +124,266 @@
 </aside>
 
 <!-- Модалка редактора (новый дизайн) -->
-<div aria-hidden="true" class="modal" id="modal">
+<div id="modal" class="modal" aria-hidden="true">
     <div class="modal-card editor-modal">
+        <!-- Заголовок -->
         <div class="editor-header">
-            <h3 id="modalTitle">Редактирование пары</h3>
-            <button class="editor-close" id="closeModalBtn" title="Закрыть (Esc)">✕</button>
+            <h3 id="modalTitle">Редактирование</h3>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button id="showRecommendationsBtn" class="editor-btn editor-btn-info" style="display:none; font-size: 12px; padding: 6px 12px;">
+                    Рекомендации
+                </button>
+                <button id="closeModalBtn" class="editor-close">&times;</button>
+            </div>
         </div>
 
+        <!-- Тело -->
         <div class="editor-body">
             <!-- Информация о паре -->
-            <div class="pair-info" id="pairInfo"></div>
+            <div id="pairInfo" class="pair-info">
+                <div class="pair-info-icon">&#128197;</div>
+                <div class="pair-info-content">
+                    <div class="pair-info-title"></div>
+                    <div class="pair-info-value"></div>
+                </div>
+                <span class="pair-info-badge"></span>
+            </div>
 
-            <!-- Форма редактирования -->
+            <!-- Форма -->
             <div class="editor-form">
                 <div class="form-grid">
-                    <!-- Дисциплина -->
-                    <div class="form-group">
-                        <label class="form-label">
-                            <span class="label-icon">📚</span>
-                            Дисциплина
-                        </label>
-                        <div class="select-wrapper">
-                            <select class="editor-select" id="f_course" required>
-                                <option value="">Выберите дисциплину</option>
-                            </select>
-                            <span class="select-arrow">▼</span>
-                        </div>
-                    </div>
+                    <!-- Поля для ручного добавления (скрыты по умолчанию) -->
+        <div class="form-group manual-field" style="display: none;">
+            <label class="form-label">Дата</label>
+            <input type="date" id="f_date" class="editor-select">
+        </div>
 
-                    <!-- Группа -->
-                    <div class="form-group">
-                        <label class="form-label">
-                            <span class="label-icon">👥</span>
-                            Группа
-                        </label>
-                        <div class="select-wrapper">
-                            <select class="editor-select" id="f_group" required>
-                                <option value="">Выберите группу</option>
-                            </select>
-                            <span class="select-arrow">▼</span>
-                        </div>
-                    </div>
+        <div class="form-group manual-field" style="display: none;">
+            <label class="form-label">Преподаватель</label>
+            <div class="select-wrapper">
+                <select id="f_teacher" class="editor-select">
+                    <option value="">Выберите преподавателя</option>
+                </select>
+                <span class="select-arrow">&#9660;</span>
+            </div>
+        </div>
+
+        <div class="form-group manual-field" style="display: none;">
+            <label class="form-label">Пара</label>
+            <div class="select-wrapper">
+                <select id="f_pair" class="editor-select">
+                    <option value="">Выберите пару</option>
+                    <option value="0">1-2 час</option>
+                    <option value="1">3-4 час</option>
+                    <option value="2">5-6 час</option>
+                    <option value="3">7-8 час</option>
+                </select>
+                <span class="select-arrow">&#9660;</span>
+            </div>
+        </div>
 
                     <!-- Тип занятия -->
                     <div class="form-group">
-                        <label class="form-label">
-                            <span class="label-icon">📋</span>
-                            Тип занятия
-                        </label>
+                        <label class="form-label">Тип занятия</label>
                         <div class="select-wrapper">
-                            <select class="editor-select" id="f_type" required>
-                                <option value="">Выберите тип занятия</option>
+                            <select id="f_type" class="editor-select">
+                                <option value="">Выберите тип</option>
                             </select>
-                            <span class="select-arrow">▼</span>
+                            <span class="select-arrow">&#9660;</span>
                         </div>
                     </div>
 
-                    <!-- Аудитория -->
+                    <!-- Номер занятия -->
                     <div class="form-group">
-                        <label class="form-label">
-                            <span class="label-icon">🏛️</span>
-                            Аудитория
-                        </label>
+                        <label class="form-label" for="f_lesson_num">Номер занятия</label>
+                        <input type="number" id="f_lesson_num" class="editor-select"
+                               placeholder="Например: 1" min="1">
+                    </div>
+
+                    <!-- Дисциплина -->
+                    <div class="form-group">
+                        <label class="form-label">Дисциплина</label>
                         <div class="select-wrapper">
-                            <select class="editor-select" id="f_room" required>
-                                <option value="">Выберите аудиторию</option>
+                            <select id="f_course" class="editor-select">
+                                <option value="">Выберите дисциплину</option>
                             </select>
-                            <span class="select-arrow">▼</span>
+                            <span class="select-arrow">&#9660;</span>
+                        </div>
+                    </div>
+
+                    <!-- Преподаватели -->
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <label class="form-label" style="margin-bottom: 0;">Преподаватели</label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="multiTeacher">
+                                <span>Несколько</span>
+                            </label>
+                        </div>
+                        <div id="teacherContainer">
+                            <div class="select-wrapper">
+                                <select id="teacherSingle" class="editor-select">
+                                    <option value="">Выберите преподавателя</option>
+                                </select>
+                                <span class="select-arrow">&#9660;</span>
+                            </div>
+                        </div>
+                        <div id="teacherMulti" style="display:none;">
+                            <div class="multi-select-header" id="teacherToggle">
+                                <span id="teacherBadge" class="badge none">Ничего не выбрано</span>
+                                <span style="color: var(--muted);">&#9660;</span>
+                            </div>
+                            <div id="teacherDropdown" class="multi-dropdown" style="display:none;">
+                                <input type="text" id="teacherSearch" placeholder="Поиск преподавателя..." class="multi-search">
+                                <div class="multi-actions">
+                                    <button type="button" id="teacherSelectAll" class="btn-link">Все</button>
+                                    <button type="button" id="teacherSelectNone" class="btn-link">Сброс</button>
+                                </div>
+                                <div id="teacherList" class="multi-list"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Аудитории -->
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <label class="form-label" style="margin-bottom: 0;">Аудитория</label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="multiRoom">
+                                <span>Несколько</span>
+                            </label>
+                        </div>
+                        <div id="roomContainer">
+                            <div class="select-wrapper">
+                                <select id="roomSingle" class="editor-select">
+                                    <option value="">Выберите аудиторию</option>
+                                </select>
+                                <span class="select-arrow">&#9660;</span>
+                            </div>
+                        </div>
+                        <div id="roomMulti" style="display:none;">
+                            <div class="multi-select-header" id="roomToggle">
+                                <span id="roomBadge" class="badge none">Ничего не выбрано</span>
+                                <span style="color: var(--muted);">&#9660;</span>
+                            </div>
+                            <div id="roomDropdown" class="multi-dropdown" style="display:none;">
+                                <input type="text" id="roomSearch" placeholder="Поиск аудитории..." class="multi-search">
+                                <div class="multi-actions">
+                                    <button type="button" id="roomSelectAll" class="btn-link">Все</button>
+                                    <button type="button" id="roomSelectNone" class="btn-link">Сброс</button>
+                                </div>
+                                <div id="roomList" class="multi-list"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Группы -->
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <label class="form-label" style="margin-bottom: 0;">Группа</label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="multiGroup">
+                                <span>Несколько</span>
+                            </label>
+                        </div>
+                        <div id="groupContainer">
+                            <div class="select-wrapper">
+                                <select id="groupSingle" class="editor-select">
+                                    <option value="">Выберите группу</option>
+                                </select>
+                                <span class="select-arrow">&#9660;</span>
+                            </div>
+                        </div>
+                        <div id="groupMulti" style="display:none;">
+                            <div class="multi-select-header" id="groupToggle">
+                                <span id="groupBadge" class="badge none">Ничего не выбрано</span>
+                                <span style="color: var(--muted);">&#9660;</span>
+                            </div>
+                            <div id="groupDropdown" class="multi-dropdown" style="display:none;">
+                                <input type="text" id="groupSearch" placeholder="Поиск группы..." class="multi-search">
+                                <div class="multi-actions">
+                                    <button type="button" id="groupSelectAll" class="btn-link">Все</button>
+                                    <button type="button" id="groupSelectNone" class="btn-link">Сброс</button>
+                                </div>
+                                <div id="groupList" class="multi-list"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Модальное окно рекомендаций для редактора -->
-            <div aria-hidden="true" class="modal" id="editorRecModal">
-                <div class="modal-card" style="max-width: 550px;">
-                    <div class="editor-header" style="background: linear-gradient(135deg, #7c5cff, #6b4ecc);">
-                        <h3 style="display: flex; align-items: center; gap: 10px; margin: 0;">
-                            <span>💡</span>
-                            <span>Рекомендации для преподавателя</span>
-                        </h3>
-                        <button class="editor-close" id="closeEditorRecModal" title="Закрыть (Esc)">✕</button>
-                    </div>
-
-                    <div style="padding: 20px;">
-                        <!-- Информация о текущей паре -->
-                        <div class="current-pair-info" id="editorRecPairInfo" style="margin-bottom: 20px;">
-                            <h4 style="margin: 0 0 8px 0; font-size: 14px;">📅 Текущая позиция:</h4>
-                            <div class="current-pair-details">
-                                <div class="current-pair-detail">
-                                    <span class="current-pair-label">Преподаватель:</span>
-                                    <span class="current-pair-value" id="editorRecTeacher"></span>
-                                </div>
-                                <div class="current-pair-detail">
-                                    <span class="current-pair-label">Дата:</span>
-                                    <span class="current-pair-value" id="editorRecDate"></span>
-                                </div>
-                                <div class="current-pair-detail">
-                                    <span class="current-pair-label">Пара:</span>
-                                    <span class="current-pair-value" id="editorRecPeriod"></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Вкладки рекомендаций -->
-                        <div class="teacher-categories" style="margin-bottom: 16px;">
-                            <button class="teacher-category-btn rec-type-tab active" data-rectype="math" type="button">
-                                📐 Математические
-                            </button>
-                            <button class="teacher-category-btn rec-type-tab" data-rectype="ai" type="button">
-                                🤖 ИИ рекомендации
-                            </button>
-                        </div>
-
-                        <!-- Контент рекомендаций -->
-                        <div id="editorRecContent">
-                            <!-- Загрузка -->
-                            <div class="recommendations-loading" id="editorRecLoading" style="display: none;">
-                                <div class="spinner"></div>
-                                <span>Анализ истории преподавателя...</span>
-                            </div>
-
-                            <!-- Список рекомендаций -->
-                            <div class="recommendations-list" id="editorRecList" style="max-height: 350px; overflow-y: auto;">
-                                <!-- Список будет заполнен через JS -->
-                            </div>
-
-                            <!-- Пустое состояние -->
-                            <div class="recommendations-empty" id="editorRecEmpty" style="display: none; text-align: center; padding: 40px;">
-                                <div class="empty-icon">🔍</div>
-                                <div class="empty-text">Нет рекомендаций для этого преподавателя</div>
-                                <div class="empty-hint">У преподавателя пока нет истории занятий</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="editor-footer" style="border-top: 1px solid var(--border);">
-                        <div class="footer-right" style="width: 100%; justify-content: flex-end;">
-                            <button class="editor-btn editor-btn-secondary" id="closeEditorRecModalBtn">
-                                <span class="btn-icon">✕</span>
-                                Закрыть
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            </div>
-
+        <!-- Футер -->
         <div class="editor-footer">
             <div class="footer-left">
-                <button class="editor-btn editor-btn-danger" id="btnDelete" style="display: none;">
-                    <span class="btn-icon">🗑️</span>
+                <button id="btnDelete" class="editor-btn editor-btn-danger" style="display:none;">
                     Удалить
-                </button>
-                <button class="editor-btn editor-btn-success" id="showRecommendationsBtn">
-                    <span class="btn-icon">💡</span>
-                    Рекомендовать пару
                 </button>
             </div>
             <div class="footer-right">
-                <button class="editor-btn editor-btn-secondary" id="btnCancel">
-                    <span class="btn-icon">✕</span>
-                    Отмена
-                </button>
-                <button class="editor-btn editor-btn-primary" id="btnSave">
-                    <span class="btn-icon">✓</span>
-                    Сохранить
-                </button>
+                <button id="btnCancel" class="editor-btn editor-btn-secondary">Отмена</button>
+                <button id="btnSave" class="editor-btn editor-btn-primary">Сохранить</button>
             </div>
         </div>
     </div>
+</div>
+
+<!-- Модальное окно рекомендаций -->
+<div id="editorRecModal" class="modal" aria-hidden="true">
+    <div class="modal-card">
+        <div class="editor-header">
+            <h3>Рекомендации для пары</h3>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="rec-type-tab active" data-rectype="math" style="padding: 6px 12px; border: 1px solid var(--border); background: var(--surface); border-radius: 8px; cursor: pointer; font-size: 12px;">Математические</button>
+                <button class="rec-type-tab" data-rectype="ai" style="padding: 6px 12px; border: 1px solid var(--border); background: var(--surface); border-radius: 8px; cursor: pointer; font-size: 12px;">ИИ</button>
+                <button id="closeEditorRecModalBtn" class="editor-close">&times;</button>
+            </div>
+        </div>
+
+        <!-- Информация о текущей паре -->
+        <div id="editorRecPairInfo" style="padding: 16px; margin: 0; background: var(--surface); border-bottom: 1px solid var(--border);">
+            <h4 style="margin: 0 0 10px 0;">Текущая пара</h4>
+            <div class="current-pair-details">
+                <div class="current-pair-detail">
+                    <span class="current-pair-label">Преподаватель</span>
+                    <span class="current-pair-value" id="editorRecTeacher">-</span>
+                </div>
+                <div class="current-pair-detail">
+                    <span class="current-pair-label">Дата</span>
+                    <span class="current-pair-value" id="editorRecDate">-</span>
+                </div>
+                <div class="current-pair-detail">
+                    <span class="current-pair-label">Пара</span>
+                    <span class="current-pair-value" id="editorRecPeriod">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div style="padding: 16px; max-height: 400px; overflow-y: auto;">
+            <!-- Загрузка -->
+            <div id="editorRecLoading" style="display: none; text-align: center; padding: 40px;">
+                <div class="spinner"></div>
+                <p style="margin-top: 16px; color: var(--muted);">Загрузка рекомендаций...</p>
+            </div>
+
+            <!-- Пустое состояние -->
+            <div id="editorRecEmpty" style="display: none; text-align: center; padding: 40px;">
+                <div class="empty-icon">&#128269;</div>
+                <div class="empty-text">Нет рекомендаций</div>
+                <div class="empty-hint">Попробуйте другой тип рекомендаций</div>
+            </div>
+
+            <!-- Список рекомендаций -->
+            <div id="editorRecList" style="display: none;"></div>
+        </div>
+
+        <div class="editor-footer">
+            <div class="footer-right">
+                <button id="closeEditorRecModal" class="editor-btn editor-btn-secondary">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 
@@ -338,19 +429,19 @@
                 <label>Пара:</label>
                 <div class="pair-selection" id="pairSelection">
                     <div class="pair-option" data-pair="0">
-                        1-2 пара
+                        1-2 час
                         <span class="pair-time">8:00-9:30</span>
                     </div>
                     <div class="pair-option" data-pair="1">
-                        3-4 пара
+                        3-4 час
                         <span class="pair-time">9:45-11:15</span>
                     </div>
                     <div class="pair-option" data-pair="2">
-                        5-6 пара
+                        5-6 час
                         <span class="pair-time">11:30-13:00</span>
                     </div>
                     <div class="pair-option" data-pair="3">
-                        7-8 пара
+                        7-8 час
                         <span class="pair-time">14:00-15:30</span>
                     </div>
                 </div>
