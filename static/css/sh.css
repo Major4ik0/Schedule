@@ -8,6 +8,7 @@
     --muted: #6b7280;
     --accent: #5b45ff;
     --accent-2: #22c55e;
+    --yellow: #b5c522;
     --danger: #ef4444;
     --ring: rgba(91, 69, 255, .35)
 }
@@ -66,6 +67,12 @@ body.theme-dark {
 
 .btn.primary {
     background: linear-gradient(180deg, var(--accent), #5b45ff);
+    border-color: transparent;
+    color: #fff;
+    font-weight: 600
+}
+.btn.yellow {
+    background: linear-gradient(180deg, var(--yellow), #bac621);
     border-color: transparent;
     color: #fff;
     font-weight: 600
@@ -3609,3 +3616,497 @@ body.theme-dark .rail {
     box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
 }
 
+/* ===== СОВРЕМЕННОЕ МОДАЛЬНОЕ ОКНО ===== */
+.modern-editor {
+    max-width: 600px !important;
+    width: 95% !important;
+    max-height: 90vh !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    border-radius: 16px !important;
+    background: var(--card) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.15) !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.modern-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #fafbff, #f4f6ff);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.modern-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.modern-header-icon {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #5b45ff, #7c5cff);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.modern-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.modern-close-btn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--muted);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modern-close-btn:hover {
+    background: #fee2e2;
+    color: #ef4444;
+    border-color: #fecaca;
+}
+
+.modern-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.modern-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modern-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.modern-input,
+.modern-select {
+    width: 100%;
+    height: 42px;
+    padding: 0 12px;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 13px;
+    color: var(--text);
+    transition: all 0.2s;
+}
+
+.modern-input:focus,
+.modern-select:focus {
+    outline: none;
+    border-color: #5b45ff;
+    box-shadow: 0 0 0 3px rgba(91,69,255,0.1);
+    background: white;
+}
+
+/* Чекбокс */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.checkbox-label input {
+    width: 16px;
+    height: 16px;
+    accent-color: #5b45ff;
+}
+
+/* ПКМ табы */
+.pmk-tabs {
+    display: flex;
+    gap: 4px;
+    background: #f1f5f9;
+    padding: 3px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+}
+
+.pmk-tab {
+    flex: 1;
+    padding: 6px 12px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.pmk-tab:hover {
+    color: var(--text);
+}
+
+.pmk-tab.active {
+    background: white;
+    color: #5b45ff;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+/* Теги выбранных */
+.selected-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 8px;
+    min-height: 24px;
+}
+
+.tag-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 14px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #4338ca;
+    animation: tagPop 0.2s ease;
+}
+
+@keyframes tagPop {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.tag-item .tag-remove {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(67,56,202,0.15);
+    cursor: pointer;
+    font-size: 9px;
+    color: #4338ca;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.tag-item .tag-remove:hover {
+    background: #ef4444;
+    color: white;
+}
+
+/* Мульти-селект */
+.multi-select-wrapper {
+    position: relative;
+}
+
+.multi-search-input {
+    width: 100%;
+    height: 38px;
+    padding: 0 12px;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 12px;
+    color: var(--text);
+}
+
+.multi-search-input:focus {
+    outline: none;
+    border-color: #5b45ff;
+    box-shadow: 0 0 0 3px rgba(91,69,255,0.1);
+    background: white;
+}
+
+.multi-dropdown-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    margin-top: 4px;
+    background: white;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    max-height: 180px;
+    overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.multi-list-inner {
+    padding: 4px;
+}
+
+.multi-list-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.1s;
+    font-size: 12px;
+}
+
+.multi-list-item:hover {
+    background: #f8fafc;
+}
+
+.multi-list-item.selected {
+    background: #eef2ff;
+}
+
+.multi-list-item input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: #5b45ff;
+}
+
+.multi-list-item .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.multi-list-item .name {
+    flex: 1;
+    font-weight: 500;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.multi-dropdown-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1000;  /* Увеличил z-index */
+    margin-top: 4px;
+    background: white;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    max-height: 220px;  /* Увеличил высоту */
+    overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);  /* Усилил тень */
+}
+
+.multi-list-item .pmk-badge {
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    color: var(--muted);
+}
+
+.selection-info {
+    margin-top: 6px;
+    font-size: 10px;
+    color: var(--muted);
+    text-align: right;
+}
+
+/* Футер */
+.modern-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    background: #fafbfc;
+    border-top: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.footer-right-group {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.modern-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.modern-btn-primary {
+    background: linear-gradient(135deg, #5b45ff, #6d5cfc);
+    color: white;
+    box-shadow: 0 2px 8px rgba(91,69,255,0.25);
+}
+
+.modern-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(91,69,255,0.35);
+}
+
+.modern-btn-danger {
+    background: white;
+    color: #ef4444;
+    border: 1.5px solid #fecaca;
+}
+
+.modern-btn-danger:hover {
+    background: #fef2f2;
+}
+
+.modern-btn-info {
+    background: #eef2ff;
+    color: #4338ca;
+    border: 1.5px solid #c7d2fe;
+}
+
+.modern-btn-info:hover {
+    background: #e0e7ff;
+}
+
+/* Пара инфо карточка */
+.pair-info-card {
+    background: linear-gradient(135deg, #f8faff, #f0f3ff);
+    border: 1px solid #dde3ff;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 16px;
+}
+
+.pair-info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.pair-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.pair-info-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+}
+
+.pair-info-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+@media (max-width: 640px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .pair-info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .modern-footer {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .footer-right-group {
+        width: 100%;
+    }
+
+    .modern-btn {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
+/* Одиночный выбор - такой же стиль как множественный */
+#teacherSingleWrap .multi-select-wrapper,
+#roomSingleWrap .multi-select-wrapper,
+#groupSingleWrap .multi-select-wrapper {
+    position: relative;
+}
+
+#teacherSingleWrap .multi-search-input,
+#roomSingleWrap .multi-search-input,
+#groupSingleWrap .multi-search-input {
+    width: 100%;
+    height: 42px;
+    padding: 0 12px;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 13px;
+    color: var(--text);
+    transition: all 0.2s;
+}
+
+#teacherSingleWrap .multi-search-input:focus,
+#roomSingleWrap .multi-search-input:focus,
+#groupSingleWrap .multi-search-input:focus {
+    outline: none;
+    border-color: #5b45ff;
+    box-shadow: 0 0 0 3px rgba(91,69,255,0.1);
+    background: white;
+}
+
+/* Выделение выбранного элемента в одиночном списке */
+#teacherSingleList .multi-list-item.selected,
+#roomSingleList .multi-list-item.selected,
+#groupSingleList .multi-list-item.selected {
+    background: #eef2ff;
+    border-left: 3px solid #5b45ff;
+}

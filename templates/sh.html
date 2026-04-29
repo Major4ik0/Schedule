@@ -94,8 +94,8 @@
 
         <div class="actions">
             <button class="btn primary" id="build">Показать расписание</button>
-            <button class="btn primary" id="addSchedule" style="background: linear-gradient(180deg, #22c55e, #16a34a);">Добавить расписание</button>
-            <button class="btn ghost" id="switchMode">Режим замены</button>
+            <button class="btn primary" id="addSchedule" style="background: linear-gradient(180deg, #22c55e, #16a34a);">Добавить занятие</button>
+            <button class="btn ghost" id="switchMode">Замена</button>
             <button class="btn ghost export" id="print">Печать</button>
         </div>
     </section>
@@ -123,206 +123,219 @@
     </div>
 </aside>
 
-<!-- Модалка редактора (новый дизайн) -->
+<!-- Модальное окно редактора -->
 <div id="modal" class="modal" aria-hidden="true">
-    <div class="modal-card editor-modal">
+    <div class="modal-card modern-editor">
         <!-- Заголовок -->
-        <div class="editor-header">
-            <h3 id="modalTitle">Редактирование</h3>
-            <div style="display: flex; gap: 8px; align-items: center;">
-                <button id="showRecommendationsBtn" class="editor-btn editor-btn-info" style="display:none; font-size: 12px; padding: 6px 12px;">
-                    Рекомендации
-                </button>
-                <button id="closeModalBtn" class="editor-close">&times;</button>
+        <div class="modern-header">
+            <div class="modern-header-left">
+                <div class="modern-header-icon">📝</div>
+                <h3 id="modalTitle">Редактирование занятия</h3>
             </div>
+            <button id="closeModalBtn" class="modern-close-btn" title="Закрыть">✕</button>
         </div>
 
         <!-- Тело -->
-        <div class="editor-body">
+        <div class="modern-body">
             <!-- Информация о паре -->
-            <div id="pairInfo" class="pair-info">
-                <div class="pair-info-icon">&#128197;</div>
-                <div class="pair-info-content">
-                    <div class="pair-info-title"></div>
-                    <div class="pair-info-value"></div>
+            <div id="pairInfo" class="pair-info-card" style="display: none;">
+                <div class="pair-info-grid">
+                    <div class="pair-info-item">
+                        <span class="pair-info-label">Преподаватель</span>
+                        <span class="pair-info-value" id="pairInfoTeacher">-</span>
+                    </div>
+                    <div class="pair-info-item">
+                        <span class="pair-info-label">Дата</span>
+                        <span class="pair-info-value" id="pairInfoDate">-</span>
+                    </div>
+                    <div class="pair-info-item">
+                        <span class="pair-info-label">Пара</span>
+                        <span class="pair-info-value" id="pairInfoPeriod">-</span>
+                    </div>
                 </div>
-                <span class="pair-info-badge"></span>
             </div>
 
             <!-- Форма -->
-            <div class="editor-form">
-                <div class="form-grid">
-                    <!-- Поля для ручного добавления (скрыты по умолчанию) -->
-        <div class="form-group manual-field" style="display: none;">
-            <label class="form-label">Дата</label>
-            <input type="date" id="f_date" class="editor-select">
-        </div>
-
-        <div class="form-group manual-field" style="display: none;">
-            <label class="form-label">Преподаватель</label>
-            <div class="select-wrapper">
-                <select id="f_teacher" class="editor-select">
-                    <option value="">Выберите преподавателя</option>
-                </select>
-                <span class="select-arrow">&#9660;</span>
-            </div>
-        </div>
-
-        <div class="form-group manual-field" style="display: none;">
-            <label class="form-label">Пара</label>
-            <div class="select-wrapper">
-                <select id="f_pair" class="editor-select">
-                    <option value="">Выберите пару</option>
-                    <option value="0">1-2 час</option>
-                    <option value="1">3-4 час</option>
-                    <option value="2">5-6 час</option>
-                    <option value="3">7-8 час</option>
-                </select>
-                <span class="select-arrow">&#9660;</span>
-            </div>
-        </div>
-
-                    <!-- Тип занятия -->
-                    <div class="form-group">
-                        <label class="form-label">Тип занятия</label>
-                        <div class="select-wrapper">
-                            <select id="f_type" class="editor-select">
-                                <option value="">Выберите тип</option>
+            <div class="modern-form">
+                <!-- Ручные поля -->
+                <div class="manual-field" style="display: none;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="modern-label">📅 Дата</label>
+                            <input type="date" id="f_date" class="modern-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="modern-label">🕐 Пара</label>
+                            <select id="f_pair" class="modern-select">
+                                <option value="">Выберите пару</option>
+                                <option value="0">1-2 час</option>
+                                <option value="1">3-4 час</option>
+                                <option value="2">5-6 час</option>
+                                <option value="3">7-8 час</option>
                             </select>
-                            <span class="select-arrow">&#9660;</span>
                         </div>
                     </div>
-
-                    <!-- Номер занятия -->
                     <div class="form-group">
-                        <label class="form-label" for="f_lesson_num">Номер занятия</label>
-                        <input type="number" id="f_lesson_num" class="editor-select"
-                               placeholder="Например: 1" min="1">
-                    </div>
-
-                    <!-- Дисциплина -->
-                    <div class="form-group">
-                        <label class="form-label">Дисциплина</label>
-                        <div class="select-wrapper">
-                            <select id="f_course" class="editor-select">
-                                <option value="">Выберите дисциплину</option>
-                            </select>
-                            <span class="select-arrow">&#9660;</span>
-                        </div>
-                    </div>
-
-                    <!-- Преподаватели -->
-                    <div class="form-group">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <label class="form-label" style="margin-bottom: 0;">Преподаватели</label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="multiTeacher">
-                                <span>Несколько</span>
-                            </label>
-                        </div>
-                        <div id="teacherContainer">
-                            <div class="select-wrapper">
-                                <select id="teacherSingle" class="editor-select">
-                                    <option value="">Выберите преподавателя</option>
-                                </select>
-                                <span class="select-arrow">&#9660;</span>
-                            </div>
-                        </div>
-                        <div id="teacherMulti" style="display:none;">
-                            <div class="multi-select-header" id="teacherToggle">
-                                <span id="teacherBadge" class="badge none">Ничего не выбрано</span>
-                                <span style="color: var(--muted);">&#9660;</span>
-                            </div>
-                            <div id="teacherDropdown" class="multi-dropdown" style="display:none;">
-                                <input type="text" id="teacherSearch" placeholder="Поиск преподавателя..." class="multi-search">
-                                <div class="multi-actions">
-                                    <button type="button" id="teacherSelectAll" class="btn-link">Все</button>
-                                    <button type="button" id="teacherSelectNone" class="btn-link">Сброс</button>
-                                </div>
-                                <div id="teacherList" class="multi-list"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Аудитории -->
-                    <div class="form-group">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <label class="form-label" style="margin-bottom: 0;">Аудитория</label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="multiRoom">
-                                <span>Несколько</span>
-                            </label>
-                        </div>
-                        <div id="roomContainer">
-                            <div class="select-wrapper">
-                                <select id="roomSingle" class="editor-select">
-                                    <option value="">Выберите аудиторию</option>
-                                </select>
-                                <span class="select-arrow">&#9660;</span>
-                            </div>
-                        </div>
-                        <div id="roomMulti" style="display:none;">
-                            <div class="multi-select-header" id="roomToggle">
-                                <span id="roomBadge" class="badge none">Ничего не выбрано</span>
-                                <span style="color: var(--muted);">&#9660;</span>
-                            </div>
-                            <div id="roomDropdown" class="multi-dropdown" style="display:none;">
-                                <input type="text" id="roomSearch" placeholder="Поиск аудитории..." class="multi-search">
-                                <div class="multi-actions">
-                                    <button type="button" id="roomSelectAll" class="btn-link">Все</button>
-                                    <button type="button" id="roomSelectNone" class="btn-link">Сброс</button>
-                                </div>
-                                <div id="roomList" class="multi-list"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Группы -->
-                    <div class="form-group">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <label class="form-label" style="margin-bottom: 0;">Группа</label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="multiGroup">
-                                <span>Несколько</span>
-                            </label>
-                        </div>
-                        <div id="groupContainer">
-                            <div class="select-wrapper">
-                                <select id="groupSingle" class="editor-select">
-                                    <option value="">Выберите группу</option>
-                                </select>
-                                <span class="select-arrow">&#9660;</span>
-                            </div>
-                        </div>
-                        <div id="groupMulti" style="display:none;">
-                            <div class="multi-select-header" id="groupToggle">
-                                <span id="groupBadge" class="badge none">Ничего не выбрано</span>
-                                <span style="color: var(--muted);">&#9660;</span>
-                            </div>
-                            <div id="groupDropdown" class="multi-dropdown" style="display:none;">
-                                <input type="text" id="groupSearch" placeholder="Поиск группы..." class="multi-search">
-                                <div class="multi-actions">
-                                    <button type="button" id="groupSelectAll" class="btn-link">Все</button>
-                                    <button type="button" id="groupSelectNone" class="btn-link">Сброс</button>
-                                </div>
-                                <div id="groupList" class="multi-list"></div>
-                            </div>
-                        </div>
+                        <label class="modern-label">👨‍🏫 Преподаватель</label>
+                        <select id="f_teacher" class="modern-select">
+                            <option value="">Выберите преподавателя</option>
+                        </select>
                     </div>
                 </div>
+
+                <!-- Тип и номер -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="modern-label">📚 Тип занятия</label>
+                        <select id="f_type" class="modern-select">
+                            <option value="">Выберите тип</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="modern-label">🔢 Номер занятия</label>
+                        <input type="number" id="f_lesson_num" class="modern-input" placeholder="1" min="1">
+                    </div>
+                </div>
+
+                <!-- Дисциплина -->
+                <div class="form-group">
+                    <label class="modern-label">📖 Дисциплина</label>
+                    <select id="f_course" class="modern-select">
+                        <option value="">Выберите дисциплину</option>
+                    </select>
+                </div>
+
+                <!-- ===== ПРЕПОДАВАТЕЛИ (всегда с поиском и ПМК) ===== -->
+<div class="form-group">
+    <div class="label-row">
+        <label class="modern-label">👨‍🏫 Преподаватели</label>
+        <label class="checkbox-label">
+            <input type="checkbox" id="multiTeacher">
+            <span>Несколько</span>
+        </label>
+    </div>
+
+    <!-- Вкладки ПМК -->
+    <div class="pmk-tabs" id="pmkTabs">
+        <button class="pmk-tab active" data-pmk="all">Все</button>
+        <button class="pmk-tab" data-pmk="1">ПКМ 1</button>
+        <button class="pmk-tab" data-pmk="2">ПКМ 2</button>
+        <button class="pmk-tab" data-pmk="other">Другие</button>
+    </div>
+
+    <!-- Одиночный выбор (стилизованный) -->
+    <div id="teacherSingleWrap">
+        <div class="multi-select-wrapper">
+            <input type="text" id="teacherSingleSearch" placeholder="🔍 Выберите преподавателя..." class="multi-search-input" autocomplete="off">
+            <div class="multi-dropdown-list" id="teacherSingleDropdown" style="display: none;">
+                <div id="teacherSingleList" class="multi-list-inner"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Множественный выбор -->
+    <div id="teacherMulti" style="display: none;">
+        <div class="selected-tags" id="selectedTeachersTags"></div>
+        <div class="multi-select-wrapper">
+            <input type="text" id="teacherSearch" placeholder="🔍 Поиск преподавателя..." class="multi-search-input">
+            <div class="multi-dropdown-list" id="teacherDropdown" style="display: none;">
+                <div id="teacherList" class="multi-list-inner"></div>
+            </div>
+        </div>
+        <div class="selection-info" id="teacherBadge">Ничего не выбрано</div>
+    </div>
+</div>
+
+<!-- ===== АУДИТОРИИ (всегда с поиском и корпусами) ===== -->
+<div class="form-group">
+    <div class="label-row">
+        <label class="modern-label">🏫 Аудитория</label>
+        <label class="checkbox-label">
+            <input type="checkbox" id="multiRoom">
+            <span>Несколько</span>
+        </label>
+    </div>
+
+    <!-- Вкладки корпусов -->
+    <div class="pmk-tabs" id="buildingTabs">
+        <button class="pmk-tab active" data-building="all">Все</button>
+    </div>
+
+    <!-- Одиночный выбор (стилизованный) -->
+    <div id="roomSingleWrap">
+        <div class="multi-select-wrapper">
+            <input type="text" id="roomSingleSearch" placeholder="🔍 Выберите аудиторию..." class="multi-search-input" autocomplete="off">
+            <div class="multi-dropdown-list" id="roomSingleDropdown" style="display: none;">
+                <div id="roomSingleList" class="multi-list-inner"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Множественный выбор -->
+    <div id="roomMulti" style="display: none;">
+        <div class="selected-tags" id="selectedRoomsTags"></div>
+        <div class="multi-select-wrapper">
+            <input type="text" id="roomSearch" placeholder="🔍 Поиск аудитории..." class="multi-search-input">
+            <div class="multi-dropdown-list" id="roomDropdown" style="display: none;">
+                <div id="roomList" class="multi-list-inner"></div>
+            </div>
+        </div>
+        <div class="selection-info" id="roomBadge">Ничего не выбрано</div>
+    </div>
+</div>
+
+<!-- ===== ГРУППЫ (всегда с поиском и факультетами) ===== -->
+<div class="form-group">
+    <div class="label-row">
+        <label class="modern-label">👥 Группа</label>
+        <label class="checkbox-label">
+            <input type="checkbox" id="multiGroup">
+            <span>Несколько</span>
+        </label>
+    </div>
+
+    <!-- Вкладки факультетов -->
+    <div class="pmk-tabs" id="facultyTabs">
+        <button class="pmk-tab active" data-faculty="all">Все</button>
+    </div>
+
+    <!-- Одиночный выбор (стилизованный) -->
+    <div id="groupSingleWrap">
+        <div class="multi-select-wrapper">
+            <input type="text" id="groupSingleSearch" placeholder="🔍 Выберите группу..." class="multi-search-input" autocomplete="off">
+            <div class="multi-dropdown-list" id="groupSingleDropdown" style="display: none;">
+                <div id="groupSingleList" class="multi-list-inner"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Множественный выбор -->
+    <div id="groupMulti" style="display: none;">
+        <div class="selected-tags" id="selectedGroupsTags"></div>
+        <div class="multi-select-wrapper">
+            <input type="text" id="groupSearch" placeholder="🔍 Поиск группы..." class="multi-search-input">
+            <div class="multi-dropdown-list" id="groupDropdown" style="display: none;">
+                <div id="groupList" class="multi-list-inner"></div>
+            </div>
+        </div>
+        <div class="selection-info" id="groupBadge">Ничего не выбрано</div>
+    </div>
+</div>
             </div>
         </div>
 
         <!-- Футер -->
-        <div class="editor-footer">
-            <div class="footer-left">
-                <button id="btnDelete" class="editor-btn editor-btn-danger" style="display:none;">
-                    Удалить
+        <div class="modern-footer">
+            <button id="btnDelete" class="modern-btn modern-btn-danger" style="display: none;">
+                🗑 Удалить
+            </button>
+            <div class="footer-right-group">
+                <button id="showRecommendationsBtn" class="modern-btn modern-btn-info" style="display: none;">
+                    💡 Рекомендации
                 </button>
-            </div>
-            <div class="footer-right">
-                <button id="btnCancel" class="editor-btn editor-btn-secondary">Отмена</button>
-                <button id="btnSave" class="editor-btn editor-btn-primary">Сохранить</button>
+                <button id="btnSave" class="modern-btn modern-btn-primary">
+                    ✓ Сохранить
+                </button>
             </div>
         </div>
     </div>
@@ -469,10 +482,10 @@
             Все
         </button>
         <button class="teacher-category-btn" data-category="1" type="button">
-            ПКМ 1
+            ПМК 1
         </button>
         <button class="teacher-category-btn" data-category="2" type="button">
-            ПКМ 2
+            ПМК 2
         </button>
     </div>
 
