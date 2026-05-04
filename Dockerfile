@@ -14,7 +14,6 @@ WORKDIR /app
 # Установка системных зависимостей для numpy/scikit-learn
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
-    g++ \
     libblas-dev \
     liblapack-dev \
     libatlas-base-dev \

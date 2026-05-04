@@ -5,8 +5,12 @@
     <meta content="width=device-width, initial-scale=1" name="viewport"/>
     <title>Расписание преподавателей</title>
     <link href="{{url_for('static', filename='css/sh.css') }}" rel="stylesheet">
+    <!-- AI Assistant Widget -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/chat_widget.css') }}">
+<!-- HTML виджета (вставь HTML из шага 1) -->
+<script src="{{ url_for('static', filename='js/ai_widget.js') }}"></script>
 </head>
-<body>
+<body data-is-admin="{{ 'true' if is_admin else 'false' }}">
 <div class="container">
     <section class="hero">
         <h1>Расписание преподавателей</h1>
@@ -553,5 +557,58 @@
 
 </script>
 <script defer src="{{ url_for('static', filename='js/sh.js') }}"></script>
+
+<!-- AI Assistant Widget -->
+<div class="ai-widget" id="aiWidget">
+    <button class="ai-widget-button" id="aiWidgetButton" title="AI Ассистент">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <line x1="9" y1="10" x2="15" y2="10"/>
+            <line x1="12" y1="7" x2="12" y2="13"/>
+        </svg>
+    </button>
+
+    <div class="ai-chat" id="aiChat">
+        <div class="ai-chat-header">
+            <div class="ai-chat-header-left">
+                <div class="ai-chat-avatar">🤖</div>
+                <div class="ai-chat-header-info">
+                    <h3>AI Ассистент</h3>
+                    <p id="aiContextLabel">Готов помочь</p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="ai-context-badge" id="aiContextBadge">пользователь</span>
+                <button class="ai-chat-close" id="aiChatClose">✕</button>
+            </div>
+        </div>
+
+        <div class="ai-chat-messages" id="aiMessages">
+            <!-- Приветственное сообщение -->
+            <div class="ai-message bot">
+                <div class="ai-message-avatar">🤖</div>
+                <div class="ai-message-content">
+                    👋 Здравствуйте! Я AI-ассистент.<br>
+                    Я могу помочь с расписанием, найти ближайшую пару,
+                    подсказать по заменам преподавателей и многое другое.
+                </div>
+            </div>
+        </div>
+
+        <div class="ai-quick-actions" id="aiQuickActions">
+            <!-- Быстрые кнопки зависят от роли -->
+        </div>
+
+        <div class="ai-chat-input">
+            <input type="text" id="aiInput" placeholder="Задайте вопрос..." />
+            <button class="ai-send-btn" id="aiSendBtn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="22" y1="2" x2="11" y2="13"/>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
 </body>
 </html>

@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Обучение AI-ассистента</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 20px;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1 { margin-bottom: 24px; color: #7c5cff; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        .stat-value { font-size: 28px; font-weight: 700; color: #7c5cff; }
+        .stat-label { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+
+        .section {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .section h2 { margin-bottom: 16px; font-size: 18px; }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .input-row input {
+            flex: 1;
+            padding: 12px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-size: 14px;
+        }
+        .input-row select {
+            padding: 12px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-size: 14px;
+            min-width: 200px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #7c5cff; color: white; }
+        .btn-primary:hover { background: #6b4ecc; transform: translateY(-1px); }
+        .btn-success { background: #22c55e; color: white; }
+        .btn-warning { background: #f59e0b; color: #0f172a; }
+        .btn-danger { background: #ef4444; color: white; }
+
+        .example-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .example-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #0f172a;
+            border-radius: 8px;
+            gap: 12px;
+        }
+        .example-text { flex: 1; font-size: 14px; }
+        .example-intent {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .batch-area {
+            width: 100%;
+            height: 200px;
+            padding: 12px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-size: 14px;
+            font-family: monospace;
+            resize: vertical;
+            margin-bottom: 12px;
+        }
+
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 12px;
+            font-size: 14px;
+        }
+        .message.success { background: #22c55e20; color: #22c55e; border: 1px solid #22c55e40; }
+        .message.error { background: #ef444420; color: #ef4444; border: 1px solid #ef444440; }
+
+        .progress-bar {
+            height: 8px;
+            background: #334155;
+            border-radius: 4px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #7c5cff, #22c55e);
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 Обучение AI-ассистента</h1>
+
+        <!-- Статистика -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <div class="stat-value" id="statTotal">0</div>
+                <div class="stat-label">Всего примеров</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statCorrect">0</div>
+                <div class="stat-label">Правильных</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statAccuracy">0%</div>
+                <div class="stat-label">Точность</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statReady">0</div>
+                <div class="stat-label">Готово к обучению</div>
+            </div>
+        </div>
+
+        <!-- Прогресс-бар -->
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+        <div style="text-align: center; margin: 8px 0 20px; font-size: 12px; color: #94a3b8;">
+            <span id="progressText">0/100 примеров до следующего обучения</span>
+        </div>
+
+        <!-- Ручное добавление -->
+        <div class="section">
+            <h2>📝 Добавить один пример</h2>
+            <div class="input-row">
+                <input type="text" id="singleQuestion" placeholder="Вопрос (например: когда пара у группы 1290)" />
+                <select id="singleIntent">
+                    <option value="">Выберите намерение</option>
+                    <option value="greeting">👋 Приветствие</option>
+                    <option value="help">❓ Помощь</option>
+                    <option value="next_lesson_group">📅 Пара у группы</option>
+                    <option value="next_lesson_teacher">👨‍🏫 Пара у преподавателя</option>
+                    <option value="today_schedule">📆 Расписание на сегодня</option>
+                    <option value="find_group">🔍 Найти группу</option>
+                    <option value="list_groups">📋 Список групп</option>
+                    <option value="workload">📊 Нагрузка</option>
+                    <option value="swap_recommendation">🔄 Замена</option>
+                </select>
+                <button class="btn btn-primary" onclick="addSingle()">➕ Добавить</button>
+            </div>
+        </div>
+
+        <!-- Пакетное добавление -->
+        <div class="section">
+            <h2>📦 Пакетное добавление</h2>
+            <p style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">
+                Формат: <code>вопрос | намерение</code> (по одному на строку)<br>
+                Пример: <code>когда пара у 1290 | next_lesson_group</code>
+            </p>
+            <textarea class="batch-area" id="batchInput" placeholder="когда пара у группы 1290 | next_lesson_group
+какие пары сегодня | today_schedule
+когда ближайшая пара у иванова | next_lesson_teacher
+привет | greeting
+что ты умеешь | help
+..."></textarea>
+            <button class="btn btn-success" onclick="addBatch()">📦 Добавить пакет</button>
+            <div id="batchResult"></div>
+        </div>
+
+        <!-- Шаблоны для быстрого добавления -->
+        <div class="section">
+            <h2>⚡ Быстрые шаблоны</h2>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                <button class="btn btn-warning" onclick="generateVariants()">🔄 Сгенерировать варианты</button>
+                <button class="btn btn-primary" onclick="loadPreset('common')">📋 Типовые вопросы</button>
+                <button class="btn btn-primary" onclick="loadPreset('groups')">👥 Вопросы о группах</button>
+                <button class="btn btn-primary" onclick="loadPreset('teachers')">👨‍🏫 О преподавателях</button>
+                <button class="btn btn-danger" onclick="retrainNow()">🚀 Обучить сейчас</button>
+            </div>
+        </div>
+
+        <!-- Последние примеры -->
+        <div class="section">
+            <h2>📋 Последние добавленные примеры</h2>
+            <div class="example-list" id="exampleList">
+                <div style="text-align: center; color: #94a3b8; padding: 40px;">
+                    Загрузка...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const INTENTS = {
+            'greeting': '👋 Приветствие',
+            'help': '❓ Помощь',
+            'next_lesson_group': '📅 Пара у группы',
+            'next_lesson_teacher': '👨‍🏫 Пара у преподавателя',
+            'today_schedule': '📆 Сегодня',
+            'find_group': '🔍 Найти группу',
+            'list_groups': '📋 Список групп',
+            'workload': '📊 Нагрузка',
+            'swap_recommendation': '🔄 Замена'
+        };
+
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/assistant/training-stats');
+                const stats = await res.json();
+
+                document.getElementById('statTotal').textContent = stats.total || 0;
+                document.getElementById('statCorrect').textContent = stats.correct || 0;
+                document.getElementById('statAccuracy').textContent =
+                    (stats.total > 0 ? Math.round(stats.accuracy * 100) : 0) + '%';
+                document.getElementById('statReady').textContent = stats.ready_for_training || 0;
+
+                // Прогресс-бар
+                const ready = stats.ready_for_training || 0;
+                const target = 20;
+                const pct = Math.min(100, Math.round(ready / target * 100));
+                document.getElementById('progressFill').style.width = pct + '%';
+                document.getElementById('progressText').textContent =
+                    `${ready}/${target} примеров до следующего обучения`;
+            } catch (e) {
+                console.error('Error loading stats:', e);
+            }
+        }
+
+        async function loadRecent() {
+            try {
+                const res = await fetch('/api/assistant/dashboard');
+                const data = await res.json();
+
+                const list = document.getElementById('exampleList');
+                if (data.recent_dialogs && data.recent_dialogs.length > 0) {
+                    list.innerHTML = data.recent_dialogs.map(d => `
+                        <div class="example-item">
+                            <span class="example-text">${escapeHtml(d.question)}</span>
+                            <span class="example-intent" style="background: ${d.correct ? '#22c55e20' : '#ef444420'};
+                                  color: ${d.correct ? '#22c55e' : '#ef4444'}">
+                                ${INTENTS[d.intent] || d.intent}
+                            </span>
+                            <span style="font-size: 10px; color: #64748b;">${d.time || ''}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 40px;">Нет примеров</div>';
+                }
+            } catch (e) {
+                console.error('Error loading recent:', e);
+            }
+        }
+
+        async function addSingle() {
+            const question = document.getElementById('singleQuestion').value.trim();
+            const intent = document.getElementById('singleIntent').value;
+
+            if (!question || !intent) {
+                alert('Заполните вопрос и выберите намерение');
+                return;
+            }
+
+            await addExamples([{question, correct_intent: intent}]);
+            document.getElementById('singleQuestion').value = '';
+            document.getElementById('singleIntent').value = '';
+        }
+
+        async function addBatch() {
+            const text = document.getElementById('batchInput').value.trim();
+            if (!text) return;
+
+            const lines = text.split('\n').filter(l => l.trim());
+            const examples = [];
+            let errors = 0;
+
+            for (const line of lines) {
+                const parts = line.split('|').map(p => p.trim());
+                if (parts.length >= 2 && INTENTS[parts[1]]) {
+                    examples.push({question: parts[0], correct_intent: parts[1]});
+                } else {
+                    errors++;
+                }
+            }
+
+            if (examples.length === 0) {
+                document.getElementById('batchResult').innerHTML =
+                    '<div class="message error">Нет валидных примеров. Формат: вопрос | намерение</div>';
+                return;
+            }
+
+            const result = await addExamples(examples);
+            document.getElementById('batchInput').value = '';
+
+            let msg = `<div class="message success">✅ Добавлено: ${result.added} примеров`;
+            if (errors > 0) msg += ` | ⚠️ Ошибок в строках: ${errors}`;
+            if (result.retrained) msg += ` | 🚀 Модель дообучена! Точность: ${result.accuracy}`;
+            msg += '</div>';
+            document.getElementById('batchResult').innerHTML = msg;
+
+            setTimeout(() => document.getElementById('batchResult').innerHTML = '', 5000);
+        }
+
+        async function addExamples(examples) {
+            let added = 0;
+
+            for (const ex of examples) {
+                try {
+                    const res = await fetch('/api/assistant/feedback', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            question: ex.question,
+                            predicted_intent: ex.correct_intent,
+                            correct_intent: ex.correct_intent,
+                            was_helpful: false,  // false чтобы сохранить как новый пример
+                            is_admin: true
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.success) added++;
+                } catch (e) {
+                    console.error('Error adding example:', e);
+                }
+            }
+
+            await loadStats();
+            await loadRecent();
+
+            // Проверяем, было ли обучение
+            const statsRes = await fetch('/api/assistant/training-stats');
+            const stats = await statsRes.json();
+
+            return {
+                added,
+                retrained: stats.ready_for_training === 0,  // если сбросилось — значит обучили
+                accuracy: stats.accuracy
+            };
+        }
+
+        function generateVariants() {
+            const baseQuestions = [
+                'когда пара у группы',
+                'ближайшая пара у',
+                'расписание группы',
+                'когда следующая пара у',
+                'какая пара у',
+                'когда учится группа'
+            ];
+
+            const groups = ['1290', '444', '555', '666', '777', '888', '999', '1200', '1350', '1400'];
+
+            const lines = [];
+            for (const q of baseQuestions) {
+                for (const g of groups) {
+                    lines.push(`${q} ${g} | next_lesson_group`);
+                }
+            }
+
+            document.getElementById('batchInput').value = lines.join('\n');
+        }
+
+        function loadPreset(type) {
+            const presets = {
+                'common': [
+                    'привет | greeting',
+                    'здравствуйте | greeting',
+                    'добрый день | greeting',
+                    'доброе утро | greeting',
+                    'что ты умеешь | help',
+                    'помоги | help',
+                    'какие функции | help',
+                    'какие пары сегодня | today_schedule',
+                    'что сегодня | today_schedule',
+                    'сегодня есть пары | today_schedule',
+                    'расписание на сегодня | today_schedule',
+                    'покажи нагрузку | workload',
+                    'нагрузка преподавателей | workload',
+                    'статистика нагрузки | workload',
+                    'список групп | list_groups',
+                    'все группы | list_groups',
+                    'какие есть группы | list_groups',
+                ],
+                'groups': [
+                    'когда пара у группы 1290 | next_lesson_group',
+                    'ближайшая пара у 444 | next_lesson_group',
+                    'расписание группы 555 | next_lesson_group',
+                    'когда учится группа 666 | next_lesson_group',
+                    'когда пары у 777 | next_lesson_group',
+                    'когда занятие у группы 888 | next_lesson_group',
+                    'где группа 1290 | find_group',
+                    'найди группу 444 | find_group',
+                    'информация о группе 555 | find_group',
+                    'где находится 666 | find_group',
+                ],
+                'teachers': [
+                    'когда пара у иванова | next_lesson_teacher',
+                    'когда пара у преподавателя петрова | next_lesson_teacher',
+                    'расписание сидорова | next_lesson_teacher',
+                    'когда ведет кузнецов | next_lesson_teacher',
+                    'когда работает смирнов | next_lesson_teacher',
+                    'когда ближайшая пара у попова | next_lesson_teacher',
+                    'кто может заменить | swap_recommendation',
+                    'порекомендуй замену | swap_recommendation',
+                    'найти замену | swap_recommendation',
+                    'кого поставить на замену | swap_recommendation',
+                ]
+            };
+
+            const preset = presets[type] || [];
+            document.getElementById('batchInput').value = preset.join('\n');
+        }
+
+        async function retrainNow() {
+            if (!confirm('Запустить принудительное обучение модели?')) return;
+
+            try {
+                const res = await fetch('/api/assistant/retrain', {method: 'POST'});
+                const data = await res.json();
+
+                if (data.success) {
+                    alert(`✅ Модель обучена! Точность: ${(data.accuracy * 100).toFixed(1)}%`);
+                } else {
+                    alert('❌ Ошибка: ' + (data.error || 'неизвестная ошибка'));
+                }
+
+                await loadStats();
+            } catch (e) {
+                alert('❌ Ошибка соединения');
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Загрузка при старте
+        loadStats();
+        loadRecent();
+        setInterval(loadStats, 10000);  // обновлять каждые 10 секунд
+    </script>
+</body>
+</html>

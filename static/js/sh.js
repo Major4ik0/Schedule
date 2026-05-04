@@ -2750,8 +2750,8 @@ tables.addEventListener('click', async (e) => {
                 }
             } else {
                 f_type.value = '';
-                roomSingle.value = '';
-                groupSingle.value = '';
+                selectedRoomSingle = '';
+                selectedGroupSingle = '';
                 f_course.value = '';
                 f_lesson_num.value = '';
             }
@@ -2996,8 +2996,8 @@ btnSave.addEventListener('click', async () => {
         date: iso,
         pair_index: index,
         typeid: f_type.value.trim(),
-        rid: roomSingle.value.trim(),
-        gid: groupSingle.value.trim(),
+        rid: selectedRoomSingle || '',
+        gid: selectedGroupSingle || '',
         cid: f_course.value.trim(),
         lesson_num: f_lesson_num.value.trim() || null
     };
@@ -3006,21 +3006,21 @@ btnSave.addEventListener('click', async () => {
         scheduleData.teachers = Array.from(selectedTeachersModal);
         scheduleData.teacher_name = scheduleData.teachers[0];
     } else {
-        scheduleData.rid = roomSingle.value.trim();
+        scheduleData.rid = selectedRoomSingle || ''
     }
 
     if (multiRoom.checked) {
         scheduleData.rooms = Array.from(selectedRoomsModal);
         scheduleData.rid = scheduleData.rooms[0];
     } else {
-        scheduleData.rid = roomSingle.value.trim();
+        scheduleData.rid = selectedRoomSingle || ''
     }
 
     if (multiGroup.checked) {
         scheduleData.groups = Array.from(selectedGroupsModal);
         scheduleData.gid = scheduleData.groups[0];
     } else {
-        scheduleData.gid = groupSingle.value.trim();
+        scheduleData.gid = selectedGroupSingle || ''
     }
 
     if (!scheduleData.typeid || !scheduleData.cid) {

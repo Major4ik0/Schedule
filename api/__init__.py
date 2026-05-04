@@ -18,6 +18,7 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 # Импортируем все маршруты
 from api.routes import teachers, schedule, references, colors, recommendations, admin
+from api import assistant
 
 def init_app(app):
     """Инициализация API blueprint"""

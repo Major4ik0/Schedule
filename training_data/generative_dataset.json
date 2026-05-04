@@ -1,0 +1,1064 @@
+[
+  {
+    "question": "привет",
+    "answer": "👋 Привет-привет! Как дела? Чем могу помочь с расписанием?",
+    "intent": "greeting",
+    "source": "human_dataset"
+  },
+  {
+    "question": "здравствуйте",
+    "answer": "😊 Добрый день! Рад вас видеть. Что вас интересует?",
+    "intent": "greeting",
+    "source": "human_dataset"
+  },
+  {
+    "question": "доброе утро",
+    "answer": "🌅 Доброе утро! Как настроение? Давайте посмотрим расписание.",
+    "intent": "greeting",
+    "source": "human_dataset"
+  },
+  {
+    "question": "добрый вечер",
+    "answer": "🌙 Добрый вечер! Ещё работаете? Я помогу с расписанием.",
+    "intent": "greeting",
+    "source": "human_dataset"
+  },
+  {
+    "question": "приветствую",
+    "answer": "🤝 Приветствую! Всегда на связи. Что подсказать?",
+    "intent": "greeting",
+    "source": "human_dataset"
+  },
+  {
+    "question": "здарова",
+    "answer": "😎 Здарова! Чего надо? Шучу, спрашивай конечно!",
+    "intent": "greeting",
+    "source": "human_dataset"
+  },
+  {
+    "question": "ку",
+    "answer": "🫡 Ку! Я тут, если что нужно по расписанию.",
+    "intent": "greeting",
+    "source": "human_dataset"
+  },
+  {
+    "question": "как дела",
+    "answer": "🤖 Дела отлично! Работаю 24/7, не устаю. А у вас как? Чем помочь?",
+    "intent": "greeting",
+    "source": "human_dataset"
+  },
+  {
+    "question": "как жизнь",
+    "answer": "😊 Жизнь прекрасна! Особенно когда могу помочь с расписанием. Что ищем?",
+    "intent": "greeting",
+    "source": "human_dataset"
+  },
+  {
+    "question": "ты кто",
+    "answer": "🦉 Я Аргус AI — ваш персональный ассистент по расписанию преподавателей. Знаю всё о группах, парах и нагрузке. Спрашивайте!",
+    "intent": "greeting",
+    "source": "human_dataset"
+  },
+  {
+    "question": "что ты такое",
+    "answer": "🤖 Я — искусственный интеллект, созданный помогать с расписанием. Могу найти пару, группу, преподавателя, показать нагрузку. Весь в вашем распоряжении!",
+    "intent": "greeting",
+    "source": "human_dataset"
+  },
+  {
+    "question": "ты живой",
+    "answer": "😄 Почти! Я программа, но стараюсь быть максимально полезным и дружелюбным. Давайте работать с расписанием!",
+    "intent": "greeting",
+    "source": "human_dataset"
+  },
+  {
+    "question": "расскажи шутку",
+    "answer": "😂 Почему преподаватель всегда носит часы? Чтобы знать, когда закончится пара! Ладно, давайте серьёзно — что по расписанию?",
+    "intent": "greeting",
+    "source": "human_dataset"
+  },
+  {
+    "question": "скучно",
+    "answer": "🎉 Скучно? Давайте найдём интересную пару в расписании! Или посмотрим нагрузку — там много цифр, не соскучитесь!",
+    "intent": "greeting",
+    "source": "human_dataset"
+  },
+  {
+    "question": "спасибо",
+    "answer": "🙏 Всегда пожалуйста! Обращайтесь ещё, я здесь 24/7.",
+    "intent": "greeting",
+    "source": "human_dataset"
+  },
+  {
+    "question": "благодарю",
+    "answer": "😊 Не за что! Рад был помочь. Если что — я рядом.",
+    "intent": "greeting",
+    "source": "human_dataset"
+  },
+  {
+    "question": "пока",
+    "answer": "👋 До встречи! Заходите, когда понадобится расписание.",
+    "intent": "greeting",
+    "source": "human_dataset"
+  },
+  {
+    "question": "до свидания",
+    "answer": "🤝 До свидания! Всегда к вашим услугам.",
+    "intent": "greeting",
+    "source": "human_dataset"
+  },
+  {
+    "question": "что ты умеешь",
+    "answer": "🦉 Я умею:\n📅 Находить ближайшую пару для группы или преподавателя\n🔍 Искать информацию о группах\n👨‍🏫 Показывать расписание преподавателей\n📊 Анализировать нагрузку (для админов)\n🔄 Рекомендовать замены\n\nПросто спросите!",
+    "intent": "help",
+    "source": "human_dataset"
+  },
+  {
+    "question": "помоги",
+    "answer": "🤝 Конечно! Вот что я могу:\n• «Когда пара у группы 1290?» — узнаете расписание\n• «Какие пары сегодня?» — посмотрите на сегодня\n• «Где группа 1480?» — найдёте группу\n• «Покажи нагрузку» — статистика (для админов)\n\nЧто именно нужно?",
+    "intent": "help",
+    "source": "human_dataset"
+  },
+  {
+    "question": "как пользоваться",
+    "answer": "📖 Всё просто! Задайте вопрос в чат:\n• «Когда ближайшая пара у группы 1290?»\n• «Когда пара у Иванова?»\n• «Список групп»\n• «Покажи нагрузку»\n\nЯ пойму и отвечу. Попробуйте!",
+    "intent": "help",
+    "source": "human_dataset"
+  },
+  {
+    "question": "что ты можешь",
+    "answer": "💪 Я могу многое! Главное — работа с расписанием:\n🔍 Поиск групп и преподавателей\n📅 Ближайшие пары\n📊 Нагрузка и статистика\n🔄 Рекомендации по замене\n\nЗадайте вопрос — я найду ответ!",
+    "intent": "help",
+    "source": "human_dataset"
+  },
+  {
+    "question": "твои функции",
+    "answer": "⚙️ Мои основные функции:\n1. 📅 Расписание — для групп и преподавателей\n2. 🔍 Поиск — группы, аудитории\n3. 📊 Нагрузка — часы, статистика\n4. 🟢 Свободные преподаватели\n5. 🔄 Рекомендации по замене\n\nЧто попробуем?",
+    "intent": "help",
+    "source": "human_dataset"
+  },
+  {
+    "question": "расскажи о себе",
+    "answer": "🦉 Я Аргус AI — создан помогать с расписанием преподавателей. Работаю 24/7, не устаю, не ошибаюсь (почти). Знаю все группы, преподавателей и пары. Мой девиз: «Быстро, точно, полезно»!",
+    "intent": "help",
+    "source": "human_dataset"
+  },
+  {
+    "question": "какие команды знаешь",
+    "answer": "📋 Никаких команд! Просто пишите как человеку:\n• «Когда пара у 1290?»\n• «Какие пары сегодня?»\n• «Найди группу 1480»\n• «Покажи нагрузку Петрова»\n• «Кто свободен?»\n\nЯ понимаю обычную речь!",
+    "intent": "help",
+    "source": "human_dataset"
+  },
+  {
+    "question": "когда пара у группы 1290",
+    "answer": "📅 Сейчас посмотрю... Вот ближайшая пара у группы 1290:\n📆 04.05.2026 (понедельник)\n🕐 1-я пара (8:00-9:30)\n📚 Математика (Лекция)\n👨‍🏫 Иванов И.И.\n🏫 Аудитория 301",
+    "intent": "next_lesson_group",
+    "source": "human_dataset"
+  },
+  {
+    "question": "ближайшая пара у 1290",
+    "answer": "🔍 Проверяю расписание... Группа 1290:\n📆 Ближайшая — 04.05.2026\n🕐 1-я пара\n📚 Математика\n👨‍🏫 Иванов И.И.\nГотовьтесь к паре!",
+    "intent": "next_lesson_group",
+    "source": "human_dataset"
+  },
+  {
+    "question": "расписание группы 1290",
+    "answer": "📅 Расписание группы 1290:\nБлижайшая пара:\n📆 04.05.2026\n🕐 1-я пара — Математика\n👨‍🏫 Иванов И.И.\n🏫 301\n\nХотите посмотреть все пары?",
+    "intent": "next_lesson_group",
+    "source": "human_dataset"
+  },
+  {
+    "question": "когда учится группа 1480",
+    "answer": "🎓 Группа 1480... Ближайшая пара:\n📆 04.05.2026 (понедельник)\n🕐 3-я пара (9:45-11:15)\n📚 Физика (Практика)\n👨‍🏫 Петров П.П.\n🏫 Лаборатория 405",
+    "intent": "next_lesson_group",
+    "source": "human_dataset"
+  },
+  {
+    "question": "когда пары у 555",
+    "answer": "📋 Группа 555, ближайшее:\n📆 04.05.2026\n🕐 2-я пара — Информатика\n👨‍🏫 Сидоров С.С.\n🏫 Компьютерный класс 210\n\nУдачной учёбы!",
+    "intent": "next_lesson_group",
+    "source": "human_dataset"
+  },
+  {
+    "question": "какая ближайшая пара у 777",
+    "answer": "🔍 Группа 777:\n📆 04.05.2026\n🕐 1-я пара\n📚 История (Семинар)\n👨‍🏫 Кузнецов К.К.\n🏫 115\n\nИнтересная тема будет!",
+    "intent": "next_lesson_group",
+    "source": "human_dataset"
+  },
+  {
+    "question": "когда пара у иванова",
+    "answer": "👨‍🏫 Иванов И.И., сейчас гляну...\n📆 Ближайшая пара: 04.05.2026\n🕐 1-я пара\n📚 Математика\n👥 Группа 1290\n🏫 301\n\nУспехов в преподавании!",
+    "intent": "next_lesson_teacher",
+    "source": "human_dataset"
+  },
+  {
+    "question": "когда ведет петров",
+    "answer": "👨‍🏫 Петров П.П., расписание:\n📆 Ближайшая: 04.05.2026\n🕐 3-я пара\n📚 Физика (Практика)\n👥 Группа 1480\n🏫 Лаборатория 405\n\nХорошей пары!",
+    "intent": "next_lesson_teacher",
+    "source": "human_dataset"
+  },
+  {
+    "question": "расписание преподавателя сидорова",
+    "answer": "👨‍🏫 Сидоров С.С.:\n📆 Ближайшая: 04.05.2026\n🕐 2-я пара — Информатика\n👥 Группа 555\n🏫 210\n\nДальше — больше пар!",
+    "intent": "next_lesson_teacher",
+    "source": "human_dataset"
+  },
+  {
+    "question": "когда работает абрамович",
+    "answer": "👨‍🏫 Абрамович М.К., проверяю:\n📆 04.05.2026\n🕐 1-я пара\n📚 ДП-1201 (Контрольная)\n👥 Группа 1290\n🏫 2к104\n\nКонтрольная — это серьёзно!",
+    "intent": "next_lesson_teacher",
+    "source": "human_dataset"
+  },
+  {
+    "question": "когда пара у кузнецова",
+    "answer": "👨‍🏫 Кузнецов Д.Г., ближайшее:\n📆 04.05.2026\n🕐 4-я пара\n📚 История\n👥 Группа 777\n🏫 115\n\nПоследняя пара в этот день.",
+    "intent": "next_lesson_teacher",
+    "source": "human_dataset"
+  },
+  {
+    "question": "какие пары у лавровой",
+    "answer": "👩‍🏫 Лаврова Е.Ю., смотрю расписание:\n📆 04.05.2026\n🕐 1-я пара — Английский\n👥 Группа 1380\n🏫 220\n\nЕщё есть пары на неделе!",
+    "intent": "next_lesson_teacher",
+    "source": "human_dataset"
+  },
+  {
+    "question": "какие пары сегодня",
+    "answer": "📅 Смотрим на сегодня...\nВсего пар: 12\n\nВот основные:\n1️⃣ 1-я пара — Математика (Иванов, 301)\n2️⃣ 2-я пара — Информатика (Сидоров, 210)\n3️⃣ 3-я пара — Физика (Петров, 405)\n\nОткройте расписание для полного списка!",
+    "intent": "today_schedule",
+    "source": "human_dataset"
+  },
+  {
+    "question": "что сегодня",
+    "answer": "📅 Сегодня понедельник, день насыщенный:\n📚 12 пар всего\n👨‍🏫 8 преподавателей работают\n🏫 Все аудитории заняты\n\nСамая ранняя — 8:00, самая поздняя — 15:30.",
+    "intent": "today_schedule",
+    "source": "human_dataset"
+  },
+  {
+    "question": "сегодня есть пары",
+    "answer": "✅ Да, сегодня учебный день!\n📚 Всего 12 пар\n🕐 С 8:00 до 15:30\n\nХотите узнать про конкретную группу или преподавателя?",
+    "intent": "today_schedule",
+    "source": "human_dataset"
+  },
+  {
+    "question": "расписание на сегодня",
+    "answer": "📅 Расписание на сегодня (понедельник):\n\n🕐 1-я пара (8:00-9:30):\n• Математика, Иванов, 1290, 301\n• ДП-1201, Абрамович, 1290, 2к104\n\n🕐 2-я пара (9:45-11:15):\n• Информатика, Сидоров, 555, 210\n\nИ ещё 9 пар. Подробнее — в таблице расписания!",
+    "intent": "today_schedule",
+    "source": "human_dataset"
+  },
+  {
+    "question": "пар нет сегодня",
+    "answer": "🎉 Ура! Сегодня выходной, можно отдохнуть!\n\nЕсли хотите посмотреть на будущие дни — спросите про конкретную дату или группу.",
+    "intent": "today_schedule",
+    "source": "human_dataset"
+  },
+  {
+    "question": "где группа 1290",
+    "answer": "🔍 Группа 1290:\n📚 Факультет: АСУ\n🏛️ Кафедра: 9 КАФ (Радиоразведки)\n👨‍🏫 Куратор: на кафедре 164\n\nБлижайшая пара: 04.05.2026, 1-я пара.",
+    "intent": "find_group",
+    "source": "human_dataset"
+  },
+  {
+    "question": "найди группу 1480",
+    "answer": "🔍 Группа 1480 найдена:\n📚 Факультет: АСУ\n🏛️ Кафедра: 152\n📆 Ближайшая пара: 04.05.2026\n\nЧто ещё узнать?",
+    "intent": "find_group",
+    "source": "human_dataset"
+  },
+  {
+    "question": "информация о группе 555",
+    "answer": "📋 Информация о группе 555:\n📚 Факультет: Радиотехники\n🏛️ Кафедра: 153\n👥 Студентов: ~25\n📆 Активные пары: есть\n\nПоказать расписание?",
+    "intent": "find_group",
+    "source": "human_dataset"
+  },
+  {
+    "question": "какая группа 1380",
+    "answer": "🔍 Группа 1380:\n📚 Факультет: АСУ\n🏛️ Кафедра: 151\n📆 Пары на этой неделе: да\n\nПреподаватели: Иванов, Петров, Сидоров.",
+    "intent": "find_group",
+    "source": "human_dataset"
+  },
+  {
+    "question": "список групп",
+    "answer": "📋 Вот первые 10 групп:\n• 1290 (АСУ)\n• 1380 (АСУ)\n• 1480 (АСУ)\n• 1481 (АСУ)\n• 1580 (АСУ)\n• 555 (Радиотехника)\n• 777 (Информатика)\n• 11000 (Общий)\n• 121 (Спец)\n• 122 (Спец)\n\nВсего групп: 200+. Уточните поиск!",
+    "intent": "list_groups",
+    "source": "human_dataset"
+  },
+  {
+    "question": "все группы",
+    "answer": "📋 Всего групп более 200. Вот популярные:\nАСУ: 1290, 1380, 1381, 1480, 1481, 1580, 1581\nРадиотехника: 121, 122, 123, 124, 125\nИнформатика: 111, 112, 113, 114\n\nИспользуйте поиск: «Где группа [номер]?»",
+    "intent": "list_groups",
+    "source": "human_dataset"
+  },
+  {
+    "question": "покажи нагрузку",
+    "answer": "📊 Нагрузка преподавателей:\n\n👨‍🏫 Всего преподавателей: 40\n📚 Всего часов: 1,250\n📅 Занятий: 625\n📈 Средняя нагрузка: 31 час/преп.\n\nОткройте страницу /workload для детальной статистики.",
+    "intent": "workload",
+    "source": "human_dataset"
+  },
+  {
+    "question": "сколько часов у иванова",
+    "answer": "👨‍🏫 Иванов И.И., нагрузка:\n📊 Всего часов: 45\n📚 Лекций: 20ч\n📝 Практик: 15ч\n🔬 Лабораторных: 10ч\n📈 Загрузка: 30% от нормы\n\nДетальнее на странице /workload.",
+    "intent": "workload",
+    "source": "human_dataset"
+  },
+  {
+    "question": "статистика нагрузки",
+    "answer": "📊 Статистика за месяц:\n👨‍🏫 Активных преподавателей: 38\n📚 Всего пар: 625\n⏱️ Общих часов: 1,250\n📈 Средняя нагрузка: 31.6 ч/преп\n⭐ Самая высокая: 52ч (Петров)\n⚠️ Самая низкая: 8ч (Новиков)\n\nПодробнее на /workload.",
+    "intent": "workload",
+    "source": "human_dataset"
+  },
+  {
+    "question": "кого поставить на замену",
+    "answer": "🔄 Для подбора замены:\n1. Нажмите «Замена» на странице расписания\n2. Выберите пару для замены\n3. Нажмите «Рекомендации» или «ИИ»\n\nСистема учтёт:\n• Опыт с этой дисциплиной\n• Работу с группой\n• Совместимость по времени\n• Учёную степень\n\nЯ помогу найти лучшего кандидата!",
+    "intent": "swap_recommendation",
+    "source": "human_dataset"
+  },
+  {
+    "question": "порекомендуй замену",
+    "answer": "💡 Чтобы я порекомендовал замену:\n1. Откройте страницу /user\n2. Нажмите кнопку «Замена»\n3. Кликните по паре\n4. Нажмите «Рекомендации от ИИ»\n\nЯ проанализирую всех преподавателей и покажу лучших кандидатов с процентом уверенности!",
+    "intent": "swap_recommendation",
+    "source": "human_dataset"
+  },
+  {
+    "question": "кто может заменить",
+    "answer": "🔄 Замена преподавателя — важное дело!\n\nЯ могу:\n🤖 Подобрать по ML (точность ~85%)\n📐 Рассчитать математически\n👥 Учесть опыт с группой\n📚 Проверить знание дисциплины\n\nОткройте режим замены и я всё покажу!",
+    "intent": "swap_recommendation",
+    "source": "human_dataset"
+  },
+  {
+    "question": "кто свободен",
+    "answer": "🟢 Свободные преподаватели на сегодня:\n• Иванов И.И. (ПМК 1)\n• Петров П.П. (ПМК 2)\n• Сидоров С.С. (ПМК 1)\n• Кузнецов Д.Г. (ПМК 2)\n\nВсего свободных: 12 из 40.\n\nУточните: «Кто свободен на 2-й паре?»",
+    "intent": "free_teachers",
+    "source": "human_dataset"
+  },
+  {
+    "question": "свободные преподаватели сегодня",
+    "answer": "🟢 Сегодня свободны:\n👨‍🏫 ПМК 1: Иванов, Сидоров, Гамов, Бойкова\n👨‍🏫 ПМК 2: Петров, Кузнецов, Лаврова, Алексеев\n\nВсего: 12 преподавателей.\n\nХотите на конкретную пару?",
+    "intent": "free_teachers",
+    "source": "human_dataset"
+  },
+  {
+    "question": "где аудитория 301",
+    "answer": "🏫 Аудитория 301:\n📍 Корпус: 3\n📚 Вместимость: 30 мест\n📅 Занята: да (1-я пара)\n👨‍🏫 Сейчас: Иванов И.И., Математика\n\nХотите узнать расписание этой аудитории?",
+    "intent": "find_room",
+    "source": "human_dataset"
+  },
+  {
+    "question": "в каком кабинете пара у 1290",
+    "answer": "🏫 Группа 1290, ближайшая пара:\n📆 04.05.2026\n🕐 1-я пара\n🏫 Аудитория: 301\n\nПриходите заранее, чтобы занять место!",
+    "intent": "find_room",
+    "source": "human_dataset"
+  },
+  {
+    "question": "какая погода",
+    "answer": "🌤 Я специализируюсь на расписании, а не на погоде! 😄\n\nНо могу помочь:\n📅 С расписанием\n🔍 Поиском групп\n👨‍🏫 Информацией о преподавателях\n\nСпрашивайте!",
+    "intent": "fallback",
+    "source": "human_dataset"
+  },
+  {
+    "question": "сколько времени",
+    "answer": "⏰ Я не показываю время, но могу рассказать о времени пар!\n\nНапример:\n🕐 1-я пара: 8:00-9:30\n🕐 2-я пара: 9:45-11:15\n🕐 3-я пара: 11:30-13:00\n🕐 4-я пара: 14:00-15:30\n\nЧто-то ещё по расписанию?",
+    "intent": "fallback",
+    "source": "human_dataset"
+  },
+  {
+    "question": "поговори со мной",
+    "answer": "😊 С удовольствием! О чём хотите поговорить?\n\nМогу рассказать о:\n📅 Расписании\n👨‍🏫 Преподавателях\n📊 Нагрузке\n🔄 Заменах\n\nИли просто спросите что-нибудь интересное о вашем учебном заведении!",
+    "intent": "fallback",
+    "source": "human_dataset"
+  },
+  {
+    "question": "ты умный",
+    "answer": "🤖 Спасибо! Я стараюсь быть полезным.\n\nМой интеллект заточен на:\n📅 Расписание\n🔍 Поиск\n📊 Аналитику\n🔄 Рекомендации\n\nИ я постоянно учусь на ваших вопросах!",
+    "intent": "fallback",
+    "source": "human_dataset"
+  },
+  {
+    "question": "привет",
+    "answer": "😊 Здравствуйте! Что вас интересует?",
+    "intent": "greeting",
+    "source": "dialogs"
+  },
+  {
+    "question": "здравствуйте",
+    "answer": "😊 Здравствуйте! Что вас интересует?",
+    "intent": "greeting",
+    "source": "dialogs"
+  },
+  {
+    "question": "добрый день",
+    "answer": "😊 Здравствуйте! Что вас интересует?",
+    "intent": "greeting",
+    "source": "dialogs"
+  },
+  {
+    "question": "доброе утро",
+    "answer": "👋 Привет! Чем могу помочь с расписанием?",
+    "intent": "greeting",
+    "source": "dialogs"
+  },
+  {
+    "question": "добрый вечер",
+    "answer": "👋 Привет! Чем могу помочь с расписанием?",
+    "intent": "greeting",
+    "source": "dialogs"
+  },
+  {
+    "question": "здравствуй",
+    "answer": "😊 Здравствуйте! Что вас интересует?",
+    "intent": "greeting",
+    "source": "dialogs"
+  },
+  {
+    "question": "приветствую",
+    "answer": "🤝 Приветствую! Спрашивайте о расписании.",
+    "intent": "greeting",
+    "source": "dialogs"
+  },
+  {
+    "question": "ку",
+    "answer": "👋 Привет! Чем могу помочь с расписанием?",
+    "intent": "greeting",
+    "source": "dialogs"
+  },
+  {
+    "question": "что ты умеешь",
+    "answer": "Мои функции: расписание, поиск, нагрузка, замены. Спрашивайте!",
+    "intent": "help",
+    "source": "dialogs"
+  },
+  {
+    "question": "помощь",
+    "answer": "Я могу помочь с расписанием, поиском групп и преподавателей.",
+    "intent": "help",
+    "source": "dialogs"
+  },
+  {
+    "question": "помоги мне",
+    "answer": "Я могу помочь с расписанием, поиском групп и преподавателей.",
+    "intent": "help",
+    "source": "dialogs"
+  },
+  {
+    "question": "какие у тебя функции",
+    "answer": "Я могу помочь с расписанием, поиском групп и преподавателей.",
+    "intent": "help",
+    "source": "dialogs"
+  },
+  {
+    "question": "что ты можешь",
+    "answer": "Я могу помочь с расписанием, поиском групп и преподавателей.",
+    "intent": "help",
+    "source": "dialogs"
+  },
+  {
+    "question": "расскажи о себе",
+    "answer": "Я могу помочь с расписанием, поиском групп и преподавателей.",
+    "intent": "help",
+    "source": "dialogs"
+  },
+  {
+    "question": "твои возможности",
+    "answer": "Я могу помочь с расписанием, поиском групп и преподавателей.",
+    "intent": "help",
+    "source": "dialogs"
+  },
+  {
+    "question": "как пользоваться",
+    "answer": "Я могу помочь с расписанием, поиском групп и преподавателей.",
+    "intent": "help",
+    "source": "dialogs"
+  },
+  {
+    "question": "какие команды знаешь",
+    "answer": "Мои функции: расписание, поиск, нагрузка, замены. Спрашивайте!",
+    "intent": "help",
+    "source": "dialogs"
+  },
+  {
+    "question": "какие пары сегодня",
+    "answer": "Смотрю пары на сегодня...",
+    "intent": "today_schedule",
+    "source": "dialogs"
+  },
+  {
+    "question": "что сегодня по расписанию",
+    "answer": "📅 Сегодня по расписанию:",
+    "intent": "today_schedule",
+    "source": "dialogs"
+  },
+  {
+    "question": "расписание на сегодня",
+    "answer": "Смотрю пары на сегодня...",
+    "intent": "today_schedule",
+    "source": "dialogs"
+  },
+  {
+    "question": "сегодня есть пары",
+    "answer": "Смотрю пары на сегодня...",
+    "intent": "today_schedule",
+    "source": "dialogs"
+  },
+  {
+    "question": "какие занятия сегодня",
+    "answer": "Смотрю пары на сегодня...",
+    "intent": "today_schedule",
+    "source": "dialogs"
+  },
+  {
+    "question": "сегодня учимся",
+    "answer": "Смотрю пары на сегодня...",
+    "intent": "today_schedule",
+    "source": "dialogs"
+  },
+  {
+    "question": "что сегодня",
+    "answer": "Смотрю пары на сегодня...",
+    "intent": "today_schedule",
+    "source": "dialogs"
+  },
+  {
+    "question": "пары на сегодня",
+    "answer": "Смотрю пары на сегодня...",
+    "intent": "today_schedule",
+    "source": "dialogs"
+  },
+  {
+    "question": "есть ли сегодня занятия",
+    "answer": "Смотрю пары на сегодня...",
+    "intent": "today_schedule",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда пара у группы 1290",
+    "answer": "🔍 Нахожу расписание группы...",
+    "intent": "next_lesson_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "ближайшая пара у 1290",
+    "answer": "🔍 Нахожу расписание группы...",
+    "intent": "next_lesson_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "расписание группы 1290",
+    "answer": "📅 Сейчас посмотрю ближайшую пару для этой группы.",
+    "intent": "next_lesson_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда следующая пара у 1290",
+    "answer": "🔍 Нахожу расписание группы...",
+    "intent": "next_lesson_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда учиться группе 1290",
+    "answer": "📅 Сейчас посмотрю ближайшую пару для этой группы.",
+    "intent": "next_lesson_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда занятие у группы 1290",
+    "answer": "📅 Сейчас посмотрю ближайшую пару для этой группы.",
+    "intent": "next_lesson_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда пары у 1290",
+    "answer": "🔍 Нахожу расписание группы...",
+    "intent": "next_lesson_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда пара у 1480",
+    "answer": "🔍 Нахожу расписание группы...",
+    "intent": "next_lesson_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "ближайшая пара у 1481",
+    "answer": "🔍 Нахожу расписание группы...",
+    "intent": "next_lesson_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "расписание группы 1380",
+    "answer": "🔍 Нахожу расписание группы...",
+    "intent": "next_lesson_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда учится группа 1381",
+    "answer": "🔍 Нахожу расписание группы...",
+    "intent": "next_lesson_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда пары у 1580",
+    "answer": "📅 Сейчас посмотрю ближайшую пару для этой группы.",
+    "intent": "next_lesson_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда пара у 1581",
+    "answer": "🔍 Нахожу расписание группы...",
+    "intent": "next_lesson_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда занятие у группы 1582",
+    "answer": "🔍 Нахожу расписание группы...",
+    "intent": "next_lesson_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "расписание 1270",
+    "answer": "🔍 Нахожу расписание группы...",
+    "intent": "next_lesson_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда пара у 11000",
+    "answer": "📅 Сейчас посмотрю ближайшую пару для этой группы.",
+    "intent": "next_lesson_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "ближайшая пара у 11025",
+    "answer": "📅 Сейчас посмотрю ближайшую пару для этой группы.",
+    "intent": "next_lesson_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда учиться группе 11050",
+    "answer": "🔍 Нахожу расписание группы...",
+    "intent": "next_lesson_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда пары у 11100",
+    "answer": "🔍 Нахожу расписание группы...",
+    "intent": "next_lesson_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда пара у группы 11200",
+    "answer": "📅 Сейчас посмотрю ближайшую пару для этой группы.",
+    "intent": "next_lesson_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "расписание группы 11300",
+    "answer": "🔍 Нахожу расписание группы...",
+    "intent": "next_lesson_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда пара у иванова",
+    "answer": "📅 Проверяю расписание...",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда пара у преподавателя петрова",
+    "answer": "📅 Проверяю расписание...",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "расписание преподавателя кузнецова",
+    "answer": "📅 Проверяю расписание...",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда ближайшая пара у сидорова",
+    "answer": "👨‍🏫 Ищу ближайшую пару преподавателя.",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда ведет абрамович",
+    "answer": "👨‍🏫 Ищу ближайшую пару преподавателя.",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "расписание аксенова",
+    "answer": "📅 Проверяю расписание...",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда занятие у алексеева",
+    "answer": "👨‍🏫 Ищу ближайшую пару преподавателя.",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда пары у амелина",
+    "answer": "👨‍🏫 Ищу ближайшую пару преподавателя.",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда работает анциферов",
+    "answer": "📅 Проверяю расписание...",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда пара у артеменко",
+    "answer": "👨‍🏫 Ищу ближайшую пару преподавателя.",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "расписание базанова",
+    "answer": "📅 Проверяю расписание...",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда ведет бойкова",
+    "answer": "👨‍🏫 Ищу ближайшую пару преподавателя.",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда пара у гамова",
+    "answer": "👨‍🏫 Ищу ближайшую пару преподавателя.",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда занятие у голикова",
+    "answer": "👨‍🏫 Ищу ближайшую пару преподавателя.",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "расписание докучаева",
+    "answer": "👨‍🏫 Ищу ближайшую пару преподавателя.",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда пары у дорожкина",
+    "answer": "📅 Проверяю расписание...",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда работает ежов",
+    "answer": "📅 Проверяю расписание...",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда пара у змеева",
+    "answer": "👨‍🏫 Ищу ближайшую пару преподавателя.",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "расписание ищенко",
+    "answer": "👨‍🏫 Ищу ближайшую пару преподавателя.",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда ведет ковалев",
+    "answer": "📅 Проверяю расписание...",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда пара у козлова",
+    "answer": "👨‍🏫 Ищу ближайшую пару преподавателя.",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда занятие у колонскова",
+    "answer": "📅 Проверяю расписание...",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "расписание корягина",
+    "answer": "📅 Проверяю расписание...",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда пары у кострова",
+    "answer": "👨‍🏫 Ищу ближайшую пару преподавателя.",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда работает кузнецов",
+    "answer": "📅 Проверяю расписание...",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда пара у кураченко",
+    "answer": "👨‍🏫 Ищу ближайшую пару преподавателя.",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "расписание лавровой",
+    "answer": "📅 Проверяю расписание...",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "когда ведет нестерчук",
+    "answer": "👨‍🏫 Ищу ближайшую пару преподавателя.",
+    "intent": "next_lesson_teacher",
+    "source": "dialogs"
+  },
+  {
+    "question": "где группа 1290",
+    "answer": "Сейчас найду эту группу.",
+    "intent": "find_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "найди группу 1290",
+    "answer": "Сейчас найду эту группу.",
+    "intent": "find_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "какая группа 1290",
+    "answer": "🔍 Ищу информацию о группе.",
+    "intent": "find_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "информация о группе 1480",
+    "answer": "🔍 Ищу информацию о группе.",
+    "intent": "find_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "найти 1380",
+    "answer": "🔍 Ищу информацию о группе.",
+    "intent": "find_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "где находится 1580",
+    "answer": "🔍 Ищу информацию о группе.",
+    "intent": "find_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "покажи группу 1270",
+    "answer": "🔍 Ищу информацию о группе.",
+    "intent": "find_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "где группа 11000",
+    "answer": "Сейчас найду эту группу.",
+    "intent": "find_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "найди 11100",
+    "answer": "Сейчас найду эту группу.",
+    "intent": "find_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "информация о группе 11200",
+    "answer": "🔍 Ищу информацию о группе.",
+    "intent": "find_group",
+    "source": "dialogs"
+  },
+  {
+    "question": "список групп",
+    "answer": "📋 Вот список групп.",
+    "intent": "list_groups",
+    "source": "dialogs"
+  },
+  {
+    "question": "все группы",
+    "answer": "Показываю все группы...",
+    "intent": "list_groups",
+    "source": "dialogs"
+  },
+  {
+    "question": "какие есть группы",
+    "answer": "📋 Вот список групп.",
+    "intent": "list_groups",
+    "source": "dialogs"
+  },
+  {
+    "question": "перечисли группы",
+    "answer": "Показываю все группы...",
+    "intent": "list_groups",
+    "source": "dialogs"
+  },
+  {
+    "question": "покажи все группы",
+    "answer": "Показываю все группы...",
+    "intent": "list_groups",
+    "source": "dialogs"
+  },
+  {
+    "question": "какие группы существуют",
+    "answer": "Показываю все группы...",
+    "intent": "list_groups",
+    "source": "dialogs"
+  },
+  {
+    "question": "покажи нагрузку",
+    "answer": "Смотрю нагрузку преподавателей...",
+    "intent": "workload",
+    "source": "dialogs"
+  },
+  {
+    "question": "нагрузка преподавателя",
+    "answer": "📊 Загружаю статистику нагрузки.",
+    "intent": "workload",
+    "source": "dialogs"
+  },
+  {
+    "question": "сколько часов у иванова",
+    "answer": "📊 Загружаю статистику нагрузки.",
+    "intent": "workload",
+    "source": "dialogs"
+  },
+  {
+    "question": "статистика нагрузки",
+    "answer": "📊 Загружаю статистику нагрузки.",
+    "intent": "workload",
+    "source": "dialogs"
+  },
+  {
+    "question": "общая нагрузка",
+    "answer": "Смотрю нагрузку преподавателей...",
+    "intent": "workload",
+    "source": "dialogs"
+  },
+  {
+    "question": "нагрузка преподавателей",
+    "answer": "Смотрю нагрузку преподавателей...",
+    "intent": "workload",
+    "source": "dialogs"
+  },
+  {
+    "question": "сколько пар ведет петров",
+    "answer": "📊 Загружаю статистику нагрузки.",
+    "intent": "workload",
+    "source": "dialogs"
+  },
+  {
+    "question": "часы преподавателя кузнецова",
+    "answer": "📊 Загружаю статистику нагрузки.",
+    "intent": "workload",
+    "source": "dialogs"
+  },
+  {
+    "question": "загруженность сидорова",
+    "answer": "Смотрю нагрузку преподавателей...",
+    "intent": "workload",
+    "source": "dialogs"
+  },
+  {
+    "question": "сколько часов у абрамовича",
+    "answer": "Смотрю нагрузку преподавателей...",
+    "intent": "workload",
+    "source": "dialogs"
+  },
+  {
+    "question": "нагрузка аксенова",
+    "answer": "📊 Загружаю статистику нагрузки.",
+    "intent": "workload",
+    "source": "dialogs"
+  },
+  {
+    "question": "статистика по алексееву",
+    "answer": "📊 Загружаю статистику нагрузки.",
+    "intent": "workload",
+    "source": "dialogs"
+  },
+  {
+    "question": "кого поставить на замену",
+    "answer": "🔄 Анализирую возможные замены.",
+    "intent": "swap_recommendation",
+    "source": "dialogs"
+  },
+  {
+    "question": "замена преподавателя",
+    "answer": "🔄 Анализирую возможные замены.",
+    "intent": "swap_recommendation",
+    "source": "dialogs"
+  },
+  {
+    "question": "порекомендуй замену",
+    "answer": "Ищу лучшего кандидата на замену...",
+    "intent": "swap_recommendation",
+    "source": "dialogs"
+  },
+  {
+    "question": "кто может заменить",
+    "answer": "Ищу лучшего кандидата на замену...",
+    "intent": "swap_recommendation",
+    "source": "dialogs"
+  },
+  {
+    "question": "найти замену",
+    "answer": "Ищу лучшего кандидата на замену...",
+    "intent": "swap_recommendation",
+    "source": "dialogs"
+  },
+  {
+    "question": "заменить пару",
+    "answer": "Ищу лучшего кандидата на замену...",
+    "intent": "swap_recommendation",
+    "source": "dialogs"
+  },
+  {
+    "question": "предложи замену",
+    "answer": "Ищу лучшего кандидата на замену...",
+    "intent": "swap_recommendation",
+    "source": "dialogs"
+  },
+  {
+    "question": "кто еще может провести",
+    "answer": "🔄 Анализирую возможные замены.",
+    "intent": "swap_recommendation",
+    "source": "dialogs"
+  },
+  {
+    "question": "альтернативный преподаватель",
+    "answer": "Ищу лучшего кандидата на замену...",
+    "intent": "swap_recommendation",
+    "source": "dialogs"
+  },
+  {
+    "question": "доброе утро",
+    "answer": "🤝 Приветствую! Спрашивайте о расписании.",
+    "intent": "greeting",
+    "source": "dialogs"
+  },
+  {
+    "question": "доброе утречко",
+    "answer": "😊 Здравствуйте! Что вас интересует?",
+    "intent": "greeting",
+    "source": "dialogs"
+  },
+  {
+    "question": "привет",
+    "answer": "🤝 Приветствую! Спрашивайте о расписании.",
+    "intent": "greeting",
+    "source": "dialogs"
+  }
+]

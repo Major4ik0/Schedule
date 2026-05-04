@@ -4,7 +4,7 @@ from datetime import timedelta
 from ai_model.ml_recommender import update_recommender_async
 from apscheduler.schedulers.background import BackgroundScheduler
 from api import init_app
-
+from ai_model.auto_trainer import start_auto_trainer
 app = Flask(__name__)
 app.permanent_session_lifetime = timedelta(hours=24)
 
@@ -57,7 +57,8 @@ def scheduled_training():
 
 # Также запускаем обучение при старте приложения
 # scheduled_training()
-
+start_auto_trainer()
+print("NLU AutoTrainer started")
 
 @app.route('/')
 def index():
@@ -74,6 +75,11 @@ def user():
 @app.route('/workload')
 def workload():
     return render_template('workload.html')
+
+@app.route('/trainer')
+def trainer():
+    """Страница для ручного обучения AI-ассистента"""
+    return render_template('trainer.html')
 
 
 # app.run(host='0.0.0.0', port=5123, debug=True)
