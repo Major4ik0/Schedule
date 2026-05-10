@@ -339,12 +339,7 @@ const WorkloadApp = {
                     <td class="text-right">${item.course_works || 0}</td>
                     <td class="text-right"><strong>${total}</strong></td>
                     <td>
-                        <div class="progress-cell">
-                            <span>${percentage}%</span>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: ${percentage}%; background: ${barColor}"></div>
-                            </div>
-                        </div>
+                        
                     </td>
                     <td>
                         <button class="action-btn" onclick="WorkloadApp.showTeacherDetails(${item.teacher_id})">
@@ -488,15 +483,7 @@ const WorkloadApp = {
                             <span class="stat-label">лабов</span>
                         </div>
                     </div>
-                    <div class="card-progress">
-                        <div class="progress-label">
-                            <span>Загрузка</span>
-                            <span>${percentage}%</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${percentage}%"></div>
-                        </div>
-                    </div>
+                    
                 </div>
             `;
         }).join('');
@@ -634,7 +621,6 @@ const WorkloadApp = {
                         <div class="detail-stats">
                             <span>📊 ${stats.monthLessons || 0} занятий</span>
                             <span>⏱️ ${stats.monthHours || 0} часов</span>
-                            <span>📈 ${stats.avgWorkload || '0%'}</span>
                         </div>
                     </div>
                 </div>

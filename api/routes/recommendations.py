@@ -819,3 +819,143 @@ def get_candidates_for_slot():
             'total_free': len(free_experienced) + len(free_unexperienced)
         }
     })
+
+
+@api_bp.route('/findTeachersForCourse', methods=['POST'])
+@handle_db_errors
+def find_teachers_for_course():
+    """
+    Поиск преподавателей, которые могут вести выбранную дисциплину.
+    Ищет по истории: кто уже вел эту дисциплину, особенно с выбранной группой.
+    """
+    data = request.get_json()
+    course_id = data.get('course_id')
+    course_alias = data.get('course_alias', '')
+    group_id = data.get('group_id')
+    date = data.get('date')
+    pair_index = data.get('pair_index', 0)
+    type_id = data.get('type_id')
+
+    if not course_id and not course_alias:
+        return jsonify({'success': False, 'error': 'Не указана дисциплина'}), 400
+
+    db = DataBase()
+
+    # Собираем ID курсов
+    course_ids = []
+    if course_id:
+        course_ids.append(course_id)
+    if course_alias:
+        alias_courses = db.fetchall(
+            "SELECT cid FROM courses WHERE alias = %s", (course_alias,)
+        )
+        course_ids.extend(c['cid'] for c in alias_courses)
+
+    if not course_ids:
+        return jsonify({'success': False, 'error': 'Дисциплина не найдена'}), 404
+
+    # Определяем период и день недели
+    period_id = None
+    day_of_week = None
+
+    if date:
+        from datetime import datetime
+        from api.utils.helpers import get_academic_year_info
+        from api.utils.database import ScheduleDAO, PeriodDAO
+
+        date_obj = datetime.strptime(date, '%Y-%m-%d')
+        day_of_week = date_obj.isoweekday()
+        year_info = get_academic_year_info(date_obj)
+        s_year_id = ScheduleDAO.get_study_year_by_date(db, date_obj)
+
+        if s_year_id:
+            period_id = PeriodDAO.get_by_pair_index(db, s_year_id, pair_index)
+
+    # Основной запрос: ищем преподавателей, которые вели эту дисциплину
+    query = """
+    SELECT 
+        p.mid,
+        p.lastname,
+        p.firstname,
+        p.patronymic,
+        p.lastname || ' ' || p.firstname || ' ' || p.patronymic AS full_name,
+        ad.shortname as degree_short,
+        ad.agid as degree_id,
+        cp.id_pmk,
+        COUNT(*) as total_count,
+        COUNT(CASE WHEN ns.gid = %s THEN 1 END) as same_group_count,
+        COUNT(CASE WHEN ns.pair_type_id = %s THEN 1 END) as same_type_count,
+        MAX(
+            CASE 
+                WHEN nsv.sh_var_name ~ '^Неделя\\s+\\d+\\s+\\(' THEN
+                    TO_DATE(TRIM(SPLIT_PART(SPLIT_PART(nsv.sh_var_name, '(', 2), '-', 1)), 'DD.MM.YYYY')
+                    + (ns.day_of_week - 1) * INTERVAL '1 day'
+                ELSE NULL
+            END
+        ) as last_lesson_date
+    FROM nnz_schedule ns
+    JOIN people p ON p.mid = ANY(ns.teacher_mid)
+    LEFT JOIN academicdegree ad ON p.degree = ad.agid
+    JOIN cathedra_personnel cp ON p.mid = cp.mid
+    LEFT JOIN nnz_schedule_variants nsv ON ns.sh_var_id = nsv.sh_var_id
+    WHERE ns.cid = ANY(%s)
+      AND cp.id_pmk IN (1, 2)
+    GROUP BY p.mid, p.lastname, p.firstname, p.patronymic, 
+             ad.shortname, ad.agid, cp.id_pmk
+    ORDER BY same_group_count DESC, total_count DESC
+    LIMIT 20
+    """
+
+    teachers = db.fetchall(query, (
+        group_id or -1,
+        type_id or -1,
+        course_ids
+    ))
+
+    # Вычисляем оценку соответствия
+    max_total = max((t['total_count'] for t in teachers), default=1)
+    max_group = max((t['same_group_count'] for t in teachers), default=1)
+
+    recommendations = []
+    for t in teachers:
+        total = t['total_count'] or 0
+        same_group = t['same_group_count'] or 0
+
+        # Нормализованная оценка
+        total_score = (total / max_total * 100) if max_total > 0 else 0
+        group_score = (same_group / max_group * 100) if max_group > 0 else 0
+
+        # Итоговая оценка: 60% - опыт с группой, 40% - общий опыт
+        confidence = group_score * 0.6 + total_score * 0.4
+
+        recommendations.append({
+            'mid': t['mid'],
+            'full_name': t['full_name'],
+            'lastname': t['lastname'],
+            'firstname': t['firstname'],
+            'patronymic': t['patronymic'],
+            'degree_short': t['degree_short'],
+            'degree_id': t['degree_id'],
+            'id_pmk': t['id_pmk'],
+            'total_count': total,
+            'same_group_count': same_group,
+            'same_type_count': t['same_type_count'],
+            'confidence': round(confidence, 1),
+            'last_lesson_date': str(t['last_lesson_date'])[:10] if t.get('last_lesson_date') else None,
+            'match_score': round(confidence, 1)
+        })
+
+    # Сортируем по уверенности
+    recommendations.sort(key=lambda x: x['confidence'], reverse=True)
+
+    return jsonify({
+        'success': True,
+        'recommendations': recommendations,
+        'total_count': len(recommendations),
+        'criteria': {
+            'course_ids': course_ids,
+            'group_id': group_id,
+            'type_id': type_id,
+            'method': 'experience_based'
+        }
+    })
