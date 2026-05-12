@@ -3,11 +3,10 @@ name: Build and Push Docker Image
 on:
   push:
     branches: [main, master]
-  workflow_dispatch:  # Ручной запуск
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build-and-push:
@@ -20,11 +19,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Нужно для git push
+          fetch-depth: 0
 
-      - name: Generate version number
+      - name: Generate version number and lowercase repo
         id: version
         run: |
+          # Приводим имя репозитория к lowercase
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          echo "image=${REGISTRY}/${REPO_OWNER}/${REPO_NAME}" >> $GITHUB_OUTPUT
+          
           if [ -f VERSION ]; then
             VERSION=$(cat VERSION)
           else
@@ -50,8 +54,8 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+            ${{ steps.version.outputs.image }}:latest
+            ${{ steps.version.outputs.image }}:${{ steps.version.outputs.version }}
 
       - name: Increment version
         run: |
