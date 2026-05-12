@@ -1,5 +1,11 @@
 let swapContext = null;
 let PERIODS_DATA = {};
+let skipAutoScroll = false;
+// Глобальный кэш цветов групп (выживает между переключениями месяцев)
+const GROUP_COLOR_CACHE = new Map();
+// Глобальный буфер для копирования/вставки пар
+let clipboardPair = null;  // хранит данные скопированной пары
+let clipboardCut = false;  // флаг: была ли пара вырезана
 
 /* ===== Утилиты дат ===== */
 const pad2 = (n) => String(n).padStart(2, '0'),
@@ -22,43 +28,92 @@ let pendingScrollRestore = null;
 
 const saveScrollPosition = () => {
     const wrap = document.querySelector('.table-wrap');
+    if (!wrap) {
+        pendingScrollRestore = null;
+        return;
+    }
+
+    // Находим видимого преподавателя (чей заголовок ближе всего к верху)
+    const sectionHeads = wrap.querySelectorAll('.section-head, .teacher-title');
+    let closestTeacher = null;
+    let minDistance = Infinity;
+
+    sectionHeads.forEach(head => {
+        const rect = head.getBoundingClientRect();
+        const distance = Math.abs(rect.top);
+        if (distance < minDistance) {
+            minDistance = distance;
+            closestTeacher = head.id || head.textContent.trim();
+        }
+    });
+
     pendingScrollRestore = {
-        tableLeft: wrap ? wrap.scrollLeft : 0,
+        tableLeft: wrap.scrollLeft,
         windowTop: window.scrollY,
-        windowLeft: window.scrollX
+        windowLeft: window.scrollX,
+        targetTeacher: closestTeacher,  // ← запоминаем преподавателя
+        offset: sectionHeads.length > 0 ? sectionHeads[0].getBoundingClientRect().top : 0
     };
+
+    console.log('📍 Сохранена позиция:', pendingScrollRestore.targetTeacher);
 };
 
 const forceRestoreScroll = () => {
     if (!pendingScrollRestore) return;
+
     const wrap = document.querySelector('.table-wrap');
-    const targetTop = pendingScrollRestore.windowTop;
-    const targetLeft = pendingScrollRestore.tableLeft;
-    const applyScroll = () => {
-        window.scrollTo(pendingScrollRestore.windowLeft || 0, targetTop);
-        if (wrap) wrap.scrollLeft = targetLeft;
-    };
-    applyScroll();
-    setTimeout(applyScroll, 50);
-    setTimeout(applyScroll, 150);
-    setTimeout(applyScroll, 300);
-    setTimeout(() => { applyScroll(); pendingScrollRestore = null; }, 500);
+    if (!wrap) return;
+
+    // Пытаемся найти того же преподавателя по ID
+    let targetElement = null;
+
+    if (pendingScrollRestore.targetTeacher) {
+        // Ищем по ID (для section-head) или по содержимому (для teacher-title)
+        targetElement = document.getElementById(pendingScrollRestore.targetTeacher);
+
+        if (!targetElement) {
+            // Ищем по тексту
+            const allHeads = wrap.querySelectorAll('.section-head, .teacher-title');
+            allHeads.forEach(head => {
+                if (head.textContent.trim() === pendingScrollRestore.targetTeacher) {
+                    targetElement = head;
+                }
+            });
+        }
+    }
+
+    if (targetElement) {
+        // Прокручиваем к найденному преподавателю
+        targetElement.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }
+
+    // Восстанавливаем горизонтальный скролл
+    setTimeout(() => {
+        if (wrap) wrap.scrollLeft = pendingScrollRestore.tableLeft || 0;
+    }, 50);
+
+    console.log('📍 Восстановлена позиция к:', pendingScrollRestore.targetTeacher);
+
+    // Не сбрасываем pendingScrollRestore сразу — может понадобиться ещё
+    setTimeout(() => {
+        pendingScrollRestore = null;
+    }, 1000);
 };
 
-let scrollTimeout;
-window.addEventListener('scroll', () => {
-    clearTimeout(scrollTimeout);
-    scrollTimeout = setTimeout(() => {
-        if (!pendingScrollRestore) {
-            const wrap = document.querySelector('.table-wrap');
-            pendingScrollRestore = {
-                tableLeft: wrap ? wrap.scrollLeft : 0,
-                windowTop: window.scrollY,
-                windowLeft: window.scrollX
-            };
-        }
-    }, 100);
-}, { passive: true });
+// let scrollTimeout;
+// window.addEventListener('scroll', () => {
+//     clearTimeout(scrollTimeout);
+//     scrollTimeout = setTimeout(() => {
+//         if (!pendingScrollRestore) {
+//             const wrap = document.querySelector('.table-wrap');
+//             pendingScrollRestore = {
+//                 tableLeft: wrap ? wrap.scrollLeft : 0,
+//                 windowTop: window.scrollY,
+//                 windowLeft: window.scrollX
+//             };
+//         }
+//     }, 100);
+// }, { passive: true });
 
 /* ===== API функции ===== */
 const API_BASE = '/api';
@@ -69,6 +124,8 @@ let CLASSROOMS = [];
 let LESSON_TYPES = [];
 let GROUPS = [];
 let TEACHER_ID = {};
+// Кэш для цветов групп и преподавателей
+let TEACHER_COLOR_CACHE_PROMISES = {};
 
 const isAdminMode = () => IS_ADMIN_MODE === true;
 
@@ -333,8 +390,23 @@ const getTeacherColor = async (teacherName) => {
     }
 };
 
+// Замените существующую функцию
 const getTeachersColors = async (teachers) => {
     if (teachers.length === 0) return {};
+
+    // Фильтруем только тех, кого нет в кэше
+    const uncached = teachers.filter(t => !TEACHER_COLORS[t]);
+
+    if (uncached.length === 0) {
+        // Все уже в кэше
+        const result = {};
+        teachers.forEach(t => {
+            const colorObj = TEACHER_COLORS[t];
+            result[t] = typeof colorObj === 'object' ? colorObj.color : colorObj;
+        });
+        return result;
+    }
+
     try {
         const totalTeachers = Object.keys(TEACHERS_LIST).length;
         const paletteSize = Math.max(12, totalTeachers);
@@ -343,26 +415,38 @@ const getTeachersColors = async (teachers) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ teachers: teachers, palette_size: paletteSize })
         });
+
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
         const data = await response.json();
-        const processedData = {};
+
+        // Обрабатываем и кэшируем
         Object.keys(data).forEach(teacher => {
             const colorObj = data[teacher];
-            processedData[teacher] = typeof colorObj === 'object' ? colorObj.color : colorObj;
+            TEACHER_COLORS[teacher] = typeof colorObj === 'object' ? colorObj.color : colorObj;
         });
-        Object.assign(TEACHER_COLORS, processedData);
-        return processedData;
+
+        // Возвращаем цвета для запрошенных преподавателей
+        const result = {};
+        teachers.forEach(teacher => {
+            const colorObj = TEACHER_COLORS[teacher];
+            result[teacher] = typeof colorObj === 'object' ? colorObj.color : colorObj;
+        });
+
+        return result;
     } catch (error) {
-        const colors = {};
+        // Fallback: генерируем цвета локально
+        const result = {};
         teachers.forEach(teacher => {
             if (!TEACHER_COLORS[teacher]) {
                 const teacherHash = hashString(teacher);
-                const colorIndex = teacherHash % COLOR_PALETTE.length;
-                TEACHER_COLORS[teacher] = COLOR_PALETTE[colorIndex];
+                const colorIndex = teacherHash % (COLOR_PALETTE.length || 12);
+                TEACHER_COLORS[teacher] = COLOR_PALETTE[colorIndex] || '#cccccc';
             }
-            colors[teacher] = TEACHER_COLORS[teacher];
+            const colorObj = TEACHER_COLORS[teacher];
+            result[teacher] = typeof colorObj === 'object' ? colorObj.color : colorObj;
         });
-        return colors;
+        return result;
     }
 };
 
@@ -548,7 +632,7 @@ switchModeBtn.addEventListener('click', () => {
         document.body.classList.add('swap-mode');
         showNotification('Выберите пару для замены. Кликните на ячейку с парой.', 'info');
     } else {
-        switchModeBtn.textContent = 'Режим замены';
+        switchModeBtn.textContent = 'Замена';
         switchModeBtn.classList.remove('yellow');
         switchModeBtn.classList.add('ghost');
         document.body.classList.remove('swap-mode');
@@ -754,9 +838,9 @@ const renderTeacherTags = () => {
 const getRoomBuilding = (shortName) => {
     if (!shortName) return 'Другие';
     const match = shortName.match(/^(\d+)к/);
-    if (match) return `К${match[1]}`;
+    if (match) return `${match[1]}к`;
     const firstDigit = shortName.match(/^(\d+)/);
-    if (firstDigit) return `К${firstDigit[1]}`;
+    if (firstDigit) return `${firstDigit[1]}к`;
     return 'Другие';
 };
 
@@ -907,7 +991,7 @@ let openModal_fn = (title, pairData = null) => {
     const pairInfo = document.getElementById('pairInfo');
     if (pairData) {
         pairInfo.style.display = 'block';
-        const hoursMap = ['1-2 час (8:00-9:30)', '3-4 час (9:45-11:15)', '5-6 час (11:30-13:00)', '7-8 час (14:00-15:30)'];
+        const hoursMap = ['1-2 час', '3-4 час', '5-6 час', '7-8 час'];
         document.getElementById('pairInfoTeacher').textContent = pairData.teacher || '-';
         document.getElementById('pairInfoDate').textContent = pairData.date || '-';
         document.getElementById('pairInfoPeriod').textContent = hoursMap[pairData.index] || `Пара ${(pairData.index || 0) + 1}`;
@@ -1079,6 +1163,10 @@ btnSave.addEventListener('click', async () => {
         const teacherNames = Array.from(selectedTeachersModal);
         const courseId = getSelectedCourseId();
 
+        // Получаем массивы ID
+        const roomIds = Array.from(selectedRoomsModal).map(id => parseInt(id));
+        const groupIds = Array.from(selectedGroupsModal).map(id => parseInt(id));
+
         const scheduleData = {
             teacher_name: teacherNames[0] || '',
             teacher_mid: '',
@@ -1089,18 +1177,20 @@ btnSave.addEventListener('click', async () => {
             cid: courseId || '',
             lesson_num: f_lesson_num.value.trim() || null,
             teachers: teacherNames,
-            rooms: Array.from(selectedRoomsModal).map(id => parseInt(id)),
-            rid: parseInt(Array.from(selectedRoomsModal)[0]) || '',
-            groups: Array.from(selectedGroupsModal).map(id => parseInt(id)),
-            gid: parseInt(Array.from(selectedGroupsModal)[0]) || ''
+            rooms: roomIds,                    // массив всех аудиторий
+            rid: roomIds,                      // массив всех аудиторий (для БД)
+            groups: groupIds,                  // массив всех групп
+            gid: groupIds[0] || ''             // первая группа как основная (одно число)
         };
 
-        if (!scheduleData.typeid || !scheduleData.cid || !scheduleData.rid || !scheduleData.gid) {
+        // Валидация: проверяем что есть хотя бы одна аудитория и группа
+        if (!scheduleData.typeid || !scheduleData.cid || !roomIds.length || !groupIds.length) {
             alert('Пожалуйста, заполните все обязательные поля');
             return;
         }
 
         try {
+            skipAutoScroll = true;
             saveScrollPosition();
             const result = await postSchedule(scheduleData);
 
@@ -1126,6 +1216,10 @@ btnSave.addEventListener('click', async () => {
     const teacherNames = Array.from(selectedTeachersModal);
     const courseId = getSelectedCourseId();
 
+    // Получаем массивы ID
+    const roomIds = Array.from(selectedRoomsModal).map(id => parseInt(id));
+    const groupIds = Array.from(selectedGroupsModal).map(id => parseInt(id));
+
     const scheduleData = {
         teacher_name: teacherNames[0] || teacher,
         teacher_mid: teacher_mid,
@@ -1136,10 +1230,10 @@ btnSave.addEventListener('click', async () => {
         cid: courseId || '',
         lesson_num: f_lesson_num.value.trim() || null,
         teachers: teacherNames,
-        rooms: Array.from(selectedRoomsModal).map(id => parseInt(id)),
-        rid: parseInt(Array.from(selectedRoomsModal)[0]) || '',
-        groups: Array.from(selectedGroupsModal).map(id => parseInt(id)),
-        gid: parseInt(Array.from(selectedGroupsModal)[0]) || ''
+        rooms: roomIds,                    // массив всех аудиторий
+        rid: roomIds,                      // массив всех аудиторий (для БД)
+        groups: groupIds,                  // массив всех групп
+        gid: groupIds[0] || ''             // первая группа как основная
     };
 
     if (!scheduleData.typeid || !scheduleData.cid) {
@@ -1304,24 +1398,426 @@ const populateTeacherListForSwap = async (excludeTeacher) => {
     if (currentTeacherOption) currentTeacherOption.classList.add('selected');
 };
 
+// ===== ОБРАБОТЧИКИ КНОПОК РЕКОМЕНДАЦИЙ =====
+
+// Обработчик кнопки "Рекомендации" (математические)
+document.getElementById('loadRecommendations').addEventListener('click', async () => {
+    console.log('🔘 Нажата кнопка "Рекомендации"');
+
+    if (!swapContext) {
+        showNotification('Сначала выберите пару для замены', 'warning');
+        return;
+    }
+
+    const recommendationsPanel = document.getElementById('recommendationsPanel');
+    const recommendationsList = document.getElementById('recommendationsList');
+    const recLoading = document.getElementById('recLoading');
+    const recEmpty = document.getElementById('recEmpty');
+    const recBadge = document.getElementById('recBadge');
+
+    recommendationsPanel.classList.add('open');
+    recLoading.style.display = 'flex';
+    recommendationsList.innerHTML = '';
+    recEmpty.style.display = 'none';
+
+    try {
+        const currentData = swapContext.currentData;
+        console.log('📊 Данные для математических рекомендаций:', currentData);
+
+        if (!currentData) {
+            recLoading.style.display = 'none';
+            recEmpty.style.display = 'block';
+            return;
+        }
+
+        // Получаем typeid
+        let typeid = currentData.typeid;
+        if (!typeid && currentData.type) {
+            const foundType = LESSON_TYPES.find(t => t.alias === currentData.type);
+            if (foundType) {
+                typeid = foundType.id;
+                console.log('✅ typeid из LESSON_TYPES:', typeid);
+            }
+        }
+
+        const teacherInfo = TEACHERS_LIST[swapContext.fromTeacher];
+        const teacherMid = teacherInfo?.id;
+
+        let cathedraId = currentData.cathedra_id || currentData.idcathedra || 151;
+
+        console.log('📤 Отправляю математический запрос:', {
+            pair_type_id: typeid,
+            cathedra_id: cathedraId,
+            exclude_teacher_id: teacherMid,
+            group_id: currentData.gid,
+            course_id: currentData.cid,
+            course_alias: currentData.course
+        });
+
+        const response = await fetch(`${API_BASE}/getTeacherRecommendations`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                pair_type_id: typeid,
+                cathedra_id: cathedraId,
+                exclude_teacher_id: teacherMid,
+                group_id: currentData.gid,
+                course_id: currentData.cid,
+                course_alias: currentData.course
+            })
+        });
+
+        const data = await response.json();
+        console.log('📥 Математический ответ:', data);
+
+        recLoading.style.display = 'none';
+
+        if (data.success && data.recommendations && data.recommendations.length > 0) {
+            console.log(`✅ Получено ${data.recommendations.length} рекомендаций`);
+            displaySwapRecommendations(data.recommendations, 'mathematical');
+            if (recBadge) {
+                recBadge.textContent = data.recommendations.length;
+                recBadge.style.display = 'inline';
+            }
+        } else {
+            console.log('⚠️ Рекомендации пустые:', data);
+            recEmpty.style.display = 'block';
+            if (recBadge) recBadge.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('❌ Ошибка:', error);
+        recLoading.style.display = 'none';
+        recEmpty.style.display = 'block';
+    }
+});
+
+// Обработчик кнопки "Рекомендации от ИИ"
+document.getElementById('loadAIRecommendations').addEventListener('click', async () => {
+    console.log('🤖 Нажата кнопка "Рекомендации от ИИ"');
+
+    if (!swapContext) {
+        showNotification('Сначала выберите пару для замены', 'warning');
+        return;
+    }
+
+    const recommendationsPanel = document.getElementById('recommendationsPanel');
+    const recommendationsList = document.getElementById('recommendationsList');
+    const recLoading = document.getElementById('recLoading');
+    const recEmpty = document.getElementById('recEmpty');
+    const recNote = document.getElementById('recNote');
+    const aiRecBadge = document.getElementById('aiRecBadge');
+
+    recommendationsPanel.classList.add('open');
+    recLoading.style.display = 'flex';
+    recommendationsList.innerHTML = '';
+    recEmpty.style.display = 'none';
+    if (recNote) recNote.style.display = 'none';
+
+    try {
+        const currentData = swapContext.currentData;
+
+        console.log('📊 Данные для AI рекомендаций:', currentData);
+
+        if (!currentData) {
+            showNotification('Нет данных о текущей паре', 'error');
+            recLoading.style.display = 'none';
+            recEmpty.style.display = 'block';
+            return;
+        }
+
+        // ===== ПРОВЕРЯЕМ И ПОЛУЧАЕМ typeid =====
+        let typeid = currentData.typeid;
+        if (!typeid && currentData.type) {
+            const foundType = LESSON_TYPES.find(t => t.alias === currentData.type);
+            if (foundType) {
+                typeid = foundType.id;
+                console.log('✅ typeid получен из LESSON_TYPES:', typeid);
+            }
+        }
+
+        if (!typeid) {
+            console.error('❌ Не удалось определить typeid');
+            recLoading.style.display = 'none';
+            recEmpty.style.display = 'block';
+            const emptyHint = recEmpty.querySelector('.empty-hint');
+            if (emptyHint) emptyHint.textContent = 'Не удалось определить тип занятия';
+            return;
+        }
+
+        // Получаем ID преподавателя
+        const teacherInfo = TEACHERS_LIST[swapContext.fromTeacher];
+        const teacherMid = teacherInfo?.id;
+
+        // Определяем параметры
+        const dateObj = new Date(swapContext.date);
+        let dayOfWeek = dateObj.getDay();
+        if (dayOfWeek === 0) dayOfWeek = 7;
+
+        const pairIndex = swapContext.originalPairIndex ?? swapContext.pairIndex;
+
+        // Получаем period_id
+        let periodId = currentData.period || 0;
+        try {
+            const periodsData = await getPeriodsForDate(swapContext.date);
+            if (periodsData && periodsData[pairIndex]) {
+                periodId = periodsData[pairIndex].pair_id;
+                console.log('✅ period_id из getPeriodsForDate:', periodId);
+            }
+        } catch (e) {
+            console.warn('⚠️ Не удалось получить периоды, используем из данных:', periodId);
+        }
+
+        // Определяем cathedra_id
+        let cathedraId = currentData.cathedra_id || currentData.idcathedra || 151;
+
+        // Определяем study_year_id
+        let studyYearId = 5;
+        try {
+            const studyYearRes = await fetch(`${API_BASE}/getStudyYear?date=${swapContext.date}`);
+            const studyYearData = await studyYearRes.json();
+            if (studyYearData.success) {
+                studyYearId = studyYearData.study_year_id;
+                console.log('✅ study_year_id:', studyYearId);
+            }
+        } catch (e) {
+            console.warn('⚠️ Не удалось определить учебный год, используем:', studyYearId);
+        }
+
+        const requestBody = {
+            group_id: currentData.gid,
+            pair_type_id: typeid,  // ← теперь число, не null
+            period_id: periodId,
+            day_of_week: dayOfWeek,
+            cathedra_id: cathedraId,
+            study_year_id: studyYearId,
+            exclude_teacher_id: teacherMid,
+            course_id: currentData.cid,
+            course_alias: currentData.course
+        };
+
+        console.log('📤 Отправляю AI запрос:', requestBody);
+
+        const response = await fetch(`${API_BASE}/getAIRecommendations`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+        });
+
+        const data = await response.json();
+        console.log('📥 AI ответ:', data);
+
+        recLoading.style.display = 'none';
+
+        if (data.success && data.recommendations && data.recommendations.length > 0) {
+            console.log(`✅ Получено ${data.recommendations.length} AI-рекомендаций`);
+            displaySwapRecommendations(data.recommendations, 'ai');
+            if (aiRecBadge) {
+                aiRecBadge.textContent = data.recommendations.length;
+                aiRecBadge.style.display = 'inline';
+            }
+        } else {
+            console.log('⚠️ AI рекомендации пустые:', data);
+            recEmpty.style.display = 'block';
+            if (recEmpty.querySelector('.empty-text')) {
+                recEmpty.querySelector('.empty-text').textContent = 'Нет ИИ-рекомендаций';
+            }
+            if (recEmpty.querySelector('.empty-hint')) {
+                recEmpty.querySelector('.empty-hint').textContent = data.error || 'Недостаточно данных для рекомендаций';
+            }
+            if (aiRecBadge) aiRecBadge.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('❌ Ошибка загрузки AI рекомендаций:', error);
+        recLoading.style.display = 'none';
+        recEmpty.style.display = 'block';
+        showNotification('Ошибка: ' + error.message, 'error');
+    }
+});
+
+// Функция отображения рекомендаций
+const displaySwapRecommendations = async (recommendations, type) => {
+    const recommendationsList = document.getElementById('recommendationsList');
+    if (!recommendationsList) {
+        console.error('❌ Не найден элемент recommendationsList');
+        return;
+    }
+
+    console.log(`🎨 Отображаю ${recommendations.length} рекомендаций типа "${type}"`);
+
+    let html = '';
+
+    for (let i = 0; i < recommendations.length; i++) {
+        const rec = recommendations[i];
+
+        // Определяем оценку
+        let score;
+        if (type === 'ai') {
+            score = rec.confidence || (rec.ai_score ? rec.ai_score * 100 : 0);
+        } else {
+            score = rec.math_score || 0;
+        }
+
+        const scoreColor = score > 70 ? '#22c55e' : (score > 40 ? '#f59e0b' : '#ef4444');
+        const teacherName = (rec.full_name || `${rec.lastname || ''} ${rec.firstname || ''} ${rec.patronymic || ''}`).trim();
+
+        if (!teacherName) {
+            console.warn('⚠️ Пропущена рекомендация без имени:', rec);
+            continue;
+        }
+
+        const color = await getTeacherColor(teacherName);
+        const initials = ((rec.firstname?.[0] || '') + (rec.lastname?.[0] || '')).toUpperCase() || '👤';
+        const avatarColor = rec.id_pmk === 1 ? '#7c5cff' : '#22c55e';
+
+        const sameGroupCount = rec.same_group_count || (rec.stats?.same_group || 0);
+        const totalCount = rec.total_count || (rec.stats?.total || 0);
+
+        let experienceBadge = '';
+        if (sameGroupCount > 0) {
+            experienceBadge = `<span class="rec-badge experience">✓ С группой (${sameGroupCount})</span>`;
+        } else if (totalCount > 0) {
+            experienceBadge = `<span class="rec-badge rank-high">📚 Дисциплина (${totalCount})</span>`;
+        } else {
+            experienceBadge = `<span class="rec-badge">🆕 Новый</span>`;
+        }
+
+        html += `
+        <div class="rec-item ${sameGroupCount > 0 ? 'experienced' : ''}" 
+             onclick="selectSwapTeacher('${teacherName.replace(/'/g, "\\'")}', ${rec.mid || 0})"
+             style="animation: fadeIn 0.3s ease ${i * 0.05}s both;">
+            <div class="rec-avatar" style="background: ${avatarColor};">${initials}</div>
+            <div class="rec-info">
+                <div class="rec-name">${escapeHtml(teacherName)}</div>
+                <div class="rec-meta">
+                    <span style="display: inline-flex; align-items: center; gap: 4px;">
+                        <span class="dot" style="background: ${color}; width: 8px; height: 8px; border-radius: 50%; display: inline-block;"></span>
+                        ${rec.degree_short ? `<span class="rec-degree">🎓 ${escapeHtml(rec.degree_short)}</span>` : ''}
+                        <span class="rec-pmk">ПМК ${rec.id_pmk || '?'}</span>
+                    </span>
+                </div>
+                <div class="rec-meta" style="margin-top: 4px;">
+                    ${experienceBadge}
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0;">
+                <span style="font-size: 16px; font-weight: 700; color: ${scoreColor};">${Math.round(score)}%</span>
+                <span style="font-size: 11px; color: var(--muted);">выбрать →</span>
+            </div>
+        </div>`;
+    }
+
+    recommendationsList.innerHTML = html || '<div style="text-align: center; padding: 20px; color: var(--muted);">Нет данных для отображения</div>';
+
+    console.log(`✅ Отображено рекомендаций: ${recommendations.length}`);
+};
+
+// Функция выбора преподавателя из рекомендаций
+window.selectSwapTeacher = function(teacherName, teacherMid) {
+    console.log('👆 Выбран преподаватель из рекомендаций:', teacherName);
+
+    // Закрываем панель
+    document.getElementById('recommendationsPanel').classList.remove('open');
+
+    // Выбираем в списке замены
+    const teachersList = document.getElementById('swapTeachersList');
+    const options = teachersList.querySelectorAll('.teacher-option');
+
+    let found = false;
+    options.forEach(option => {
+        option.classList.remove('selected');
+        if (option.dataset.name === teacherName) {
+            option.classList.add('selected');
+            option.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            found = true;
+        }
+    });
+
+    if (!found) {
+        // Если не нашли в списке, ищем по поиску
+        const searchInput = document.getElementById('swapTeacherSearch');
+        if (searchInput) {
+            searchInput.value = teacherName.split(' ')[0]; // Фамилия
+            searchInput.dispatchEvent(new Event('input'));
+            setTimeout(() => {
+                const updatedOptions = teachersList.querySelectorAll('.teacher-option');
+                updatedOptions.forEach(opt => {
+                    if (opt.dataset.name === teacherName) {
+                        opt.classList.add('selected');
+                        opt.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                });
+            }, 200);
+        }
+    }
+
+    showNotification(`Выбран: ${teacherName}`, 'success');
+};
+
+// Закрытие панели рекомендаций
+document.getElementById('closeRecommendations').addEventListener('click', () => {
+    document.getElementById('recommendationsPanel').classList.remove('open');
+});
+
 const openSwapModal = async (fromTeacher, date, pairIndex, scheduleId) => {
     try {
         const currentData = DATA[fromTeacher]?.[date]?.[pairIndex];
-        if (!currentData) { showNotification('Не удалось получить данные о паре', 'error'); return; }
+        console.log('🔍 Swap modal data:', { fromTeacher, date, pairIndex, currentData });
+
+        if (!currentData) {
+            showNotification('Не удалось получить данные о паре', 'error');
+            return;
+        }
+
+        // ===== ВАЖНО: Получаем typeid =====
+        if (!currentData.typeid && currentData.type) {
+            // Ищем typeid по названию типа (alias)
+            const foundType = LESSON_TYPES.find(t => t.alias === currentData.type);
+            if (foundType) {
+                currentData.typeid = foundType.id;
+                console.log('✅ Найден typeid:', currentData.typeid, 'для типа:', currentData.type);
+            } else {
+                console.warn('⚠️ Не найден typeid для типа:', currentData.type);
+            }
+        }
+
+        // Заполняем поля на UI
         document.getElementById('currentTeacher').textContent = fromTeacher;
         document.getElementById('currentCourse').textContent = currentData.course || 'Не указано';
         document.getElementById('currentGroup').textContent = currentData.group || 'Не указано';
         document.getElementById('currentRoom').textContent = currentData.room || 'Не указано';
+
         const swapDateInput = document.getElementById('swapDateInput');
         swapDateInput.value = date;
         swapDateInput.min = new Date().toISOString().split('T')[0];
-        swapDateInput.addEventListener('change', async (e) => { if (swapContext) { swapContext.date = e.target.value; await renderPairSelection(e.target.value, swapContext.pairIndex); } });
+
+        swapDateInput.addEventListener('change', async (e) => {
+            if (swapContext) {
+                swapContext.date = e.target.value;
+                await renderPairSelection(e.target.value, swapContext.pairIndex);
+            }
+        });
+
         await renderPairSelection(date, pairIndex);
         await populateTeacherListForSwap(fromTeacher);
+
         swapModal.setAttribute('aria-hidden', 'false');
         swapModal.classList.add('open');
         swapModalTitle.textContent = `Замена пары: ${fromTeacher}`;
-        swapContext = { fromTeacher, date, pairIndex, scheduleId, originalDate: date, originalPairIndex: pairIndex, pairId: currentData.pair_id || 0 };
+
+        // ===== СОХРАНЯЕМ ПОЛНЫЕ ДАННЫЕ =====
+        swapContext = {
+            fromTeacher,
+            date,
+            pairIndex,
+            scheduleId,
+            originalDate: date,
+            originalPairIndex: pairIndex,
+            pairId: currentData.pair_id || 0,
+            currentData: currentData  // ← теперь содержит typeid
+        };
+
+        console.log('✅ swapContext сохранен:', swapContext);
+
     } catch (error) {
         console.error('Error opening swap modal:', error);
         showNotification('Ошибка при открытии окна замены', 'error');
@@ -1543,58 +2039,99 @@ const renderTeacher = async (teacher, monthVal) => {
     wrap.className = 'table-wrap';
     const {year, month0, lastDay} = getMonthBounds(monthVal);
     const tData = DATA[teacher] || {};
+
+    // Предзагружаем цвета групп
+    await preloadGroupColorsBatch(DATA);
+
     const teacherColor = await getTeacherColor(teacher);
-    const title = document.createElement('div');
-    title.className = 'teacher-title';
-    title.id = teacherId(teacher);
-    const dotSpan = document.createElement('span');
-    dotSpan.className = 'dot';
-    dotSpan.style.cssText = `width:12px;height:12px;border-radius:50%;background:${teacherColor};display:inline-block;margin-right:8px`;
-    const nameSpan = document.createElement('span');
-    nameSpan.textContent = teacher;
-    title.appendChild(dotSpan);
-    title.appendChild(nameSpan);
-    const table = document.createElement('table');
-    const thead = document.createElement('thead');
-    thead.appendChild(buildHeadRow(year, month0, lastDay));
-    table.appendChild(thead);
-    const tbody = document.createElement('tbody');
+    const id = teacherId(teacher);
+
+    let html = `<div class="teacher-title" id="${id}">
+        <span class="dot" style="width:12px;height:12px;border-radius:50%;background:${teacherColor};display:inline-block;margin-right:8px"></span>
+        <span>${escapeHtml(teacher)}</span>
+    </div>`;
+
+    html += '<table>';
+    html += '<thead>';
+    html += buildHeadRowHTML(year, month0, lastDay); // Нужна HTML-версия
+    html += '</thead><tbody>';
+
+    const hoursMap = ['1 - 2', '3 - 4', '5 - 6', '7 - 8'];
+
     for (let i = 0; i < 4; i++) {
-        const tr = document.createElement('tr');
-        const rowHead = document.createElement('td');
-        rowHead.className = 'row-head col-pair';
-        rowHead.textContent = ['1 - 2', '3 - 4', '5 - 6', '7 - 8'][i];
-        tr.appendChild(rowHead);
+        html += `<tr><td class="row-head col-pair">${hoursMap[i]}</td>`;
+
         for (let d = 1; d <= lastDay; d++) {
-            const iso = isoFromYMD(year, month0, d), pair = (tData[iso] || [])[i];
-            const td = document.createElement('td');
-            td.classList.add(new Date(`${year}-${month0 + 1}-${d}`).getDay() === 0 ? "isSundayTrue" : "isSundayFalse");
-            if (isAdminMode()) td.classList.add('editable');
-            td.dataset.teacher = teacher;
-            td.dataset.date = iso;
-            td.dataset.index = i;
-            td.dataset.teacher_mid = pair?.teacher_mid || '';
-            if (pair && pair.schedule_id) {
-                td.dataset.scheduleId = pair.schedule_id;
-                td.style.backgroundColor = await findCathedraByGroupName(pair.group);
+            const iso = isoFromYMD(year, month0, d);
+            const pair = (tData[iso] || [])[i];
+            const isSunday = new Date(year, month0, d).getDay() === 0;
+
+            let bgStyle = '';
+            if (pair && pair.schedule_id && pair.group) {
+                const cachedColor = GROUP_COLOR_CACHE.get(pair.group);
+                if (cachedColor) bgStyle = `background-color:${cachedColor};`;
             }
-            td.innerHTML = pair ? buildPairHTML(pair) : `<span class="chip muted">-</span>`;
-            tr.appendChild(td);
+
+            const scheduleId = pair?.schedule_id || '';
+            const teacherMid = pair?.teacher_mid || '';
+            const cellContent = pair ? buildPairHTML(pair) : '<span class="chip muted">-</span>';
+
+            html += `<td class="${isSunday ? 'isSundayTrue' : 'isSundayFalse'} ${isAdminMode() ? 'editable' : ''}" 
+                data-teacher="${escapeHtml(teacher)}" 
+                data-date="${iso}" 
+                data-index="${i}" 
+                data-teacher_mid="${teacherMid}"
+                ${scheduleId ? `data-schedule-id="${scheduleId}"` : ''}
+                style="${bgStyle}">${cellContent}</td>`;
         }
-        tbody.appendChild(tr);
+
+        html += '</tr>';
     }
-    table.appendChild(tbody);
-    wrap.appendChild(title);
-    wrap.appendChild(table);
-    attachScrollUX(wrap, table);
-    TEACHER_SECTIONS = [{name: teacher, id: teacherId(teacher), el: title}];
+
+    html += '</tbody></table>';
+
+    wrap.innerHTML = html;
+    attachScrollUX(wrap, wrap.querySelector('table'));
+
+    TEACHER_SECTIONS = [{name: teacher, id, el: document.getElementById(id)}];
+
     return wrap;
+};
+
+// HTML-версия buildHeadRow
+const buildHeadRowHTML = (year, month0, lastDay) => {
+    const now = new Date();
+    const todayIso = isoFromYMD(now.getFullYear(), now.getMonth(), now.getDate());
+
+    let html = '<tr><th class="col-pair col-head row-head">Часы</th>';
+
+    for (let d = 1; d <= lastDay; d++) {
+        const iso = isoFromYMD(year, month0, d);
+        const dt = new Date(year, month0, d);
+        let classes = 'day-th col-head';
+        if (isWeekend(dt)) classes += ' weekend';
+        if (iso === todayIso) classes += ' today';
+
+        html += `<th class="${classes}">${pad2(d)}</th>`;
+    }
+
+    html += '</tr>';
+    return html;
 };
 
 const renderCombinedStacked = async (teachers, monthVal) => {
     const wrap = document.createElement('div');
     wrap.className = 'table-wrap';
     const {year, month0, lastDay} = getMonthBounds(monthVal);
+
+    console.time('⏱️ renderCombinedStacked');
+
+    // Предзагружаем цвета групп ОДНИМ пакетом
+    await preloadGroupColorsBatch(DATA);
+
+    // Предзагружаем цвета преподавателей
+    const teachersColors = await getTeachersColors(teachers);
+
     const table = document.createElement('table');
     const thead = document.createElement('thead');
     thead.appendChild(buildHeadRow(year, month0, lastDay));
@@ -1603,58 +2140,71 @@ const renderCombinedStacked = async (teachers, monthVal) => {
     const tbody = document.createElement('tbody');
     TEACHER_SECTIONS = [];
 
-    const teachersColors = await getTeachersColors(teachers);
+    // Используем innerHTML для массовой вставки
+    let tbodyHTML = '';
 
     for (const tName of teachers) {
-        const teacherColor = teachersColors[tName] || await getTeacherColor(tName);
-
-        const sec = document.createElement('tr');
-        const secTd = document.createElement('td');
-        secTd.colSpan = lastDay + 1;
-        secTd.className = 'section-head';
+        const teacherColor = teachersColors[tName] || '#cccccc';
+        const tData = DATA[tName] || {};
         const id = teacherId(tName);
-        secTd.id = id;
-        secTd.innerHTML = `<span class="chip ch" style="border-color:${teacherColor}">
-            <span class="dot" style="background:${teacherColor}"></span>${tName}
-        </span>`;
-        sec.appendChild(secTd);
-        tbody.appendChild(sec);
-        TEACHER_SECTIONS.push({name: tName, id, el: secTd});
+
+        // Секция преподавателя
+        tbodyHTML += `<tr><td colspan="${lastDay + 1}" class="section-head" id="${id}">
+            <span class="chip ch" style="border-color:${teacherColor}">
+                <span class="dot" style="background:${teacherColor}"></span>${escapeHtml(tName)}
+            </span>
+        </td></tr>`;
+
+        TEACHER_SECTIONS.push({name: tName, id, el: null}); // el заполним позже
+
+        const hoursMap = ['1 - 2', '3 - 4', '5 - 6', '7 - 8'];
 
         for (let i = 0; i < 4; i++) {
-            const tr = document.createElement('tr');
-            const rowHead = document.createElement('td');
-            rowHead.className = 'row-head col-pair';
-            const hoursMap = ['1 - 2', '3 - 4', '5 - 6', '7 - 8'];
-            rowHead.textContent = hoursMap[i] || `Пара ${i + 1}`;
-            tr.appendChild(rowHead);
+            tbodyHTML += `<tr><td class="row-head col-pair">${hoursMap[i]}</td>`;
 
             for (let d = 1; d <= lastDay; d++) {
-                const iso = isoFromYMD(year, month0, d),
-                    pair = (DATA[tName]?.[iso] || [])[i];
-                const td = document.createElement('td');
-                td.classList.add(new Date(`${year}-${month0 + 1}-${d}`).getDay() === 0 ? "isSundayTrue" : "isSundayFalse");
+                const iso = isoFromYMD(year, month0, d);
+                const pair = (tData[iso] || [])[i];
+                const isSunday = new Date(year, month0, d).getDay() === 0;
 
-                if (isAdminMode()) td.classList.add('editable');
-                td.dataset.teacher = tName;
-                td.dataset.date = iso;
-                td.dataset.index = i;
-                td.dataset.teacher_mid = pair?.teacher_mid || '';
-
-                if (pair && pair.schedule_id) {
-                    td.dataset.scheduleId = pair.schedule_id;
-                    td.style.backgroundColor = await findCathedraByGroupName(pair.group);
+                let bgStyle = '';
+                if (pair && pair.schedule_id && pair.group) {
+                    const cachedColor = GROUP_COLOR_CACHE.get(pair.group);
+                    if (cachedColor) {
+                        bgStyle = `background-color:${cachedColor};`;
+                    }
                 }
 
-                td.innerHTML = pair ? buildPairHTML(pair) : `<span class="chip muted">-</span>`;
-                tr.appendChild(td);
+                const scheduleId = pair?.schedule_id || '';
+                const teacherMid = pair?.teacher_mid || '';
+                const cellContent = pair ? buildPairHTML(pair) : '<span class="chip muted">-</span>';
+
+                tbodyHTML += `<td class="${isSunday ? 'isSundayTrue' : 'isSundayFalse'} ${isAdminMode() ? 'editable' : ''}" 
+                    data-teacher="${escapeHtml(tName)}" 
+                    data-date="${iso}" 
+                    data-index="${i}" 
+                    data-teacher_mid="${teacherMid}"
+                    ${scheduleId ? `data-schedule-id="${scheduleId}"` : ''}
+                    style="${bgStyle}">${cellContent}</td>`;
             }
-            tbody.appendChild(tr);
+
+            tbodyHTML += '</tr>';
         }
     }
+
+    tbody.innerHTML = tbodyHTML;
     table.appendChild(tbody);
     wrap.appendChild(table);
+
+    // Заполняем ссылки на DOM-элементы
+    TEACHER_SECTIONS.forEach(section => {
+        section.el = document.getElementById(section.id);
+    });
+
     attachScrollUX(wrap, table);
+
+    console.timeEnd('⏱️ renderCombinedStacked');
+
     return wrap;
 };
 // Построение HTML для ячейки с парой (поддержка множественных значений)
@@ -1709,9 +2259,83 @@ const updateNavDisabled = () => {
 const currentDayFromScroll = (wrap) => 1 + Math.round((wrap?.scrollLeft || 0) / dayWidth(wrap));
 
 async function findCathedraByGroupName(groupName) {
-    const response = await fetch(`${API_BASE}/getColorAtGroup/${encodeURIComponent(groupName)}`);
-    if (!response.ok) { let errorText = 'Ошибка загрузки'; try { const errorData = await response.json(); errorText = errorData.error || errorText; } catch (e) { errorText = `HTTP error! status: ${response.status}`; } throw new Error(errorText); }
-    return await response.json();
+    if (!groupName) return '#f0f0f0';
+
+    // Проверяем глобальный кэш
+    if (GROUP_COLOR_CACHE.has(groupName)) {
+        return GROUP_COLOR_CACHE.get(groupName);
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/getColorAtGroup/${encodeURIComponent(groupName)}`);
+        if (!response.ok) {
+            const color = '#f0f0f0';
+            GROUP_COLOR_CACHE.set(groupName, color);
+            return color;
+        }
+        const color = await response.json();
+        GROUP_COLOR_CACHE.set(groupName, color);
+        return color;
+    } catch (e) {
+        const color = '#f0f0f0';
+        GROUP_COLOR_CACHE.set(groupName, color);
+        return color;
+    }
+}
+
+// Добавить в любое место
+async function preloadGroupColorsBatch(data) {
+    const uniqueGroups = new Set();
+
+    // Собираем все группы из данных
+    Object.values(data).forEach(teacherData => {
+        Object.values(teacherData).forEach(pairs => {
+            pairs.forEach(pair => {
+                if (pair && pair.group) {
+                    uniqueGroups.add(pair.group);
+                }
+            });
+        });
+    });
+
+    // Фильтруем только незакешированные
+    const uncached = [...uniqueGroups].filter(g => !GROUP_COLOR_CACHE.has(g));
+
+    if (uncached.length === 0) {
+        console.log('✅ Все цвета групп уже в кэше');
+        return;
+    }
+
+    console.log(`🎨 Загружаем цвета для ${uncached.length} новых групп...`);
+
+    // Загружаем параллельно с ограничением в 10 одновременных запросов
+    const batchSize = 10;
+    for (let i = 0; i < uncached.length; i += batchSize) {
+        const batch = uncached.slice(i, i + batchSize);
+        await Promise.allSettled(batch.map(g => findCathedraByGroupName(g)));
+    }
+
+    console.log(`✅ Цвета групп загружены (всего в кэше: ${GROUP_COLOR_CACHE.size})`);
+}
+
+// Предзагрузка всех цветов групп при загрузке данных
+async function preloadGroupColors(data) {
+    const uniqueGroups = new Set();
+
+    Object.values(data).forEach(teacherData => {
+        Object.values(teacherData).forEach(pairs => {
+            pairs.forEach(pair => {
+                if (pair && pair.group) {
+                    uniqueGroups.add(pair.group);
+                }
+            });
+        });
+    });
+
+    // Загружаем цвета параллельно
+    const promises = [...uniqueGroups].map(group => findCathedraByGroupName(group));
+    await Promise.allSettled(promises);
+    console.log(`✅ Предзагружено цветов групп: ${uniqueGroups.size}`);
 }
 
 const populateJumpTeacher = async () => {
@@ -1757,28 +2381,86 @@ const attachScrollUX = (wrap, table) => {
 
 /* ===== Основные функции ===== */
 const loadScheduleData = async (teachers, month) => {
-    if (teachers.length === 0) { DATA = {}; await renderTable(); return; }
-    try {
-        DATA = await fetchSchedule(teachers, month);
+    if (teachers.length === 0) {
+        DATA = {};
         await renderTable();
+        return;
+    }
+    try {
+        console.time('⏱️ Общая загрузка');
+
+        console.time('  📡 API запрос');
+        DATA = await fetchSchedule(teachers, month);
+        console.timeEnd('  📡 API запрос');
+
+        console.time('  🎨 Цвета групп');
+        await preloadGroupColorsBatch(DATA);
+        console.timeEnd('  🎨 Цвета групп');
+
+        console.time('  📊 Рендер таблицы');
+        await renderTable();
+        console.timeEnd('  📊 Рендер таблицы');
+
+        console.timeEnd('⏱️ Общая загрузка');
+
         if (swapMode) switchModeBtn.click();
-    } catch (error) { console.error('Ошибка при загрузке расписания:', error); tables.innerHTML = `<p class="error">Ошибка загрузки расписания: ${error.message}</p>`; DATA = {}; }
+    } catch (error) {
+        console.error('Ошибка при загрузке расписания:', error);
+        tables.innerHTML = `<p class="error">Ошибка загрузки расписания: ${error.message}</p>`;
+        DATA = {};
+    }
 };
 
 const renderTable = async () => {
     const sel = getSelectedTeachers(), monthVal = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+
+    // === СОХРАНЯЕМ ТОЧНУЮ ПОЗИЦИЮ ПЕРЕД ОЧИСТКОЙ ===
+    const wrap = document.querySelector('.table-wrap');
+    const savedScrollTop = window.scrollY || window.pageYOffset;
+    const savedScrollLeft = wrap ? wrap.scrollLeft : 0;
+
     tables.innerHTML = '';
-    if (!sel.length) { tables.innerHTML = '<div class="note" style="margin-top: 6px;">Выберите преподавателей и месяц, затем нажмите "Показать расписание"</div>'; await populateJumpTeacher(); return; }
-    if (sel.length > 1) { const table = await renderCombinedStacked(sel, monthVal); tables.appendChild(table); }
-    else { const table = await renderTeacher(sel[0], monthVal); tables.appendChild(table); }
-    const todayElement = document.querySelector('.today');
-    if (todayElement) todayElement.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'center' });
+
+    if (!sel.length) {
+        tables.innerHTML = '<div class="note" style="margin-top: 6px;">Выберите преподавателей и месяц, затем нажмите "Показать расписание"</div>';
+        await populateJumpTeacher();
+        return;
+    }
+    if (sel.length > 1) {
+        const table = await renderCombinedStacked(sel, monthVal);
+        tables.appendChild(table);
+    } else {
+        const table = await renderTeacher(sel[0], monthVal);
+        tables.appendChild(table);
+    }
+
     await populateJumpTeacher();
-    const wrap = getWrap();
-    if (wrap) { updateNavDisabled(); }
-    if (pendingScrollRestore) setTimeout(() => forceRestoreScroll(), 100);
+
+    // === ВОССТАНАВЛИВАЕМ ПОЗИЦИЮ ===
+    if (skipAutoScroll) {
+        // После вставки/удаления — возвращаем точную позицию
+        console.log('⏸️ Восстанавливаю позицию после операции');
+        window.scrollTo(0, savedScrollTop);
+        const newWrap = document.querySelector('.table-wrap');
+        if (newWrap) {
+            newWrap.scrollLeft = savedScrollLeft;
+        }
+        skipAutoScroll = false;
+    } else if (pendingScrollRestore) {
+        // При смене месяца — восстанавливаем по преподавателю
+        console.log('📍 Восстанавливаю позицию после смены месяца');
+        setTimeout(() => forceRestoreScroll(), 200);
+    } else {
+        // Первая загрузка — к сегодня
+        const todayElement = document.querySelector('.today');
+        if (todayElement) todayElement.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'center' });
+    }
+
+    const newWrap = getWrap();
+    if (newWrap) { updateNavDisabled(); }
 };
 
+// Добавьте в render() перед loadScheduleData
 const render = () => {
     const sel = getSelectedTeachers(), monthVal = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
     if (!monthVal) return;
@@ -1803,9 +2485,28 @@ printBtn.addEventListener('click', () => {
     setTimeout(() => { if (printHeader.parentNode) printHeader.remove(); if (printInfo.parentNode) printInfo.remove(); }, 100);
 });
 
-buildBtn.addEventListener('click', render);
-build_1Btn.addEventListener('click', () => { render(); ms.classList.remove('open'); });
+// В начале функции buildBtn.addEventListener (поиск преподавателей изменился):
+buildBtn.addEventListener('click', () => {
+    // Проверяем, изменился ли набор преподавателей
+    const currentSelection = getSelectedTeachers().sort().join(',');
+    if (buildBtn._lastSelection && buildBtn._lastSelection !== currentSelection) {
+        // Набор преподавателей изменился — очищаем кэш
+        GROUP_COLOR_CACHE.clear();
+    }
+    buildBtn._lastSelection = currentSelection;
 
+    render();
+});
+build_1Btn.addEventListener('click', () => {
+    const currentSelection = getSelectedTeachers().sort().join(',');
+    if (build_1Btn._lastSelection && build_1Btn._lastSelection !== currentSelection) {
+        GROUP_COLOR_CACHE.clear();
+    }
+    build_1Btn._lastSelection = currentSelection;
+
+    render();
+    ms.classList.remove('open');
+});
 allTeachersChk.addEventListener('change', () => {
     if (allTeachersChk.checked) { selectedTeachers.clear(); Object.keys(TEACHERS_LIST).forEach(n => selectedTeachers.add(n)); }
     else selectedTeachers.clear();
@@ -2001,7 +2702,6 @@ const getPairDataFromCell = (td) => {
     const teacher = td.dataset.teacher;
     const iso = td.dataset.date;
     const index = Number(td.dataset.index);
-    const scheduleId = td.dataset.scheduleId;
 
     if (!teacher || !iso) return null;
 
@@ -2016,69 +2716,144 @@ const getPairDataFromCell = (td) => {
 
     const courseId = pair.cid || '';
 
-    // Получаем актуальные ID для аудиторий
+    // Получаем ID для аудиторий
     const roomIds = (pair.rooms || []).map(roomName => {
-        if (!isNaN(Number(roomName))) return Number(roomName);
-        const found = CLASSROOMS.find(c => c.short_name === roomName || c.id == roomName);
-        return found ? found.id : roomName;
-    });
+        if (!isNaN(Number(roomName))) {
+            const numId = Number(roomName);
+            const found = CLASSROOMS.find(c => c.id === numId);
+            if (found) return numId;
+        }
+        const found = CLASSROOMS.find(c => c.short_name === roomName || String(c.id) === String(roomName));
+        return found ? found.id : null;
+    }).filter(id => id !== null);
 
-    // Если rooms пустой — используем одиночную комнату
     const allRoomIds = roomIds.length > 0 ? roomIds : (() => {
-        const found = CLASSROOMS.find(c => c.short_name === pair.room || c.id == pair.room);
-        return found ? [found.id] : [pair.rid || ''];
+        if (pair.room) {
+            const found = CLASSROOMS.find(c => c.short_name === pair.room || String(c.id) === String(pair.room));
+            if (found) return [found.id];
+        }
+        return pair.rid ? [pair.rid] : [];
     })();
 
-    const teacherNames = pair.teachers || [];
-
-    // Получаем актуальные ID для групп
+    // Получаем ID для групп (ИСПРАВЛЕНО)
     const groupIds = (pair.groups || []).map(groupName => {
-        if (!isNaN(Number(groupName))) return Number(groupName);
-        const found = GROUPS.find(gr => gr.name === groupName || gr.id == groupName);
-        return found ? found.id : groupName;
-    });
+        if (!isNaN(Number(groupName))) {
+            const numId = Number(groupName);
+            const found = GROUPS.find(gr => gr.id === numId);
+            if (found) return numId;
+        }
+        const found = GROUPS.find(gr => gr.name === groupName || String(gr.id) === String(groupName));
+        if (found) return found.id;
+
+        // Пробуем gid из пары
+        console.warn('⚠️ Группа не найдена:', groupName, 'gid из пары:', pair.gid);
+        return pair.gid || null;
+    }).filter(id => id !== null && id !== '');
 
     const allGroupIds = groupIds.length > 0 ? groupIds : (() => {
-        const found = GROUPS.find(gr => gr.name === pair.group || gr.id == pair.group);
-        return found ? [found.id] : [pair.gid || ''];
+        if (pair.gid) {
+            const found = GROUPS.find(gr => gr.id === pair.gid || String(gr.id) === String(pair.gid));
+            if (found) return [found.id];
+        }
+        if (pair.group) {
+            const found = GROUPS.find(gr => gr.name === pair.group || String(gr.id) === String(pair.group));
+            if (found) return [found.id];
+        }
+        console.error('❌ Не удалось найти ID группы:', pair.group, pair.gid);
+        return [];
     })();
 
+    // Для отправки на бэкенд: gid должен быть одним числом (первая группа)
+    const primaryGid = allGroupIds.length > 0 ? allGroupIds[0] : '';
+
     return {
-        teacher,
-        iso,
-        index,
-        scheduleId,
-        pairData: { ...pair },
-        teacher_mid: pair.teacher_mid || '',
-        period: pair.period || '',
-        cid: courseId,
-        rid: allRoomIds[0],
-        gid: allGroupIds[0],
         typeid: typeId,
+        cid: courseId,
         lesson_num: pair.lesson_num || null,
-        teachers: teacherNames,
         rooms: allRoomIds,
-        groups: allGroupIds
+        rid: allRoomIds,
+        groups: allGroupIds,
+        gid: primaryGid,                    // одно число для БД
+        teachers: pair.teachers || [],
+        course_alias: pair.course || '',
+        type_alias: pair.type || '',
+        _sourceScheduleId: null             // заполнится в обработчике Ctrl+C/X
     };
 };
 
 const pastePairToCell = async (td, pairInfo) => {
-    if (!isAdminMode()) { showNotification('Копирование/вставка доступны только в режиме администратора', 'warning'); return; }
-    const teacher = td.dataset.teacher;
+    if (!isAdminMode()) {
+        showNotification('Копирование/вставка доступны только в режиме администратора', 'warning');
+        return;
+    }
+
+    const targetTeacher = td.dataset.teacher;
     const iso = td.dataset.date;
     const index = Number(td.dataset.index);
-    const existingPair = DATA[teacher]?.[iso]?.[index];
-    if (existingPair && existingPair.schedule_id) { if (!confirm('В ячейке уже есть пара. Заменить её?')) return; }
-    const scheduleData = { teacher_name: teacher, teacher_mid: pairInfo.teacher_mid || '', period: pairInfo.period || '', date: iso, pair_index: index, typeid: pairInfo.typeid || '', rid: pairInfo.rid || '', gid: pairInfo.gid || '', cid: pairInfo.cid || '', lesson_num: pairInfo.lesson_num || null, teachers: pairInfo.teachers || [], rooms: pairInfo.rooms || [], groups: pairInfo.groups || [] };
-    if (!scheduleData.typeid || !scheduleData.rid || !scheduleData.gid || !scheduleData.cid) { showNotification('Ошибка: не удалось определить ID для всех полей.', 'error'); return; }
+
+    const existingPair = DATA[targetTeacher]?.[iso]?.[index];
+    if (existingPair && existingPair.schedule_id) {
+        if (!confirm('В ячейке уже есть пара. Заменить её?')) return;
+    }
+
+    const scheduleData = {
+        teacher_name: targetTeacher,
+        teacher_mid: '',
+        period: '',
+        date: iso,
+        pair_index: index,
+        typeid: pairInfo.typeid || '',
+        rid: pairInfo.rid || [],
+        gid: pairInfo.gid || '',
+        cid: pairInfo.cid || '',
+        lesson_num: pairInfo.lesson_num || null,
+        teachers: [targetTeacher],
+        rooms: pairInfo.rooms || [],
+        groups: pairInfo.groups || []
+    };
+
+    if (!scheduleData.typeid || !scheduleData.cid || !scheduleData.gid) {
+        showNotification('Ошибка: неполные данные пары.', 'error');
+        return;
+    }
+
     try {
-        saveScrollPosition();
+        // ЯВНО сохраняем позицию
+        skipAutoScroll = true;
+        console.log('📍 Позиция сохранена перед вставкой');
+
         let result;
-        if (existingPair && existingPair.schedule_id) { scheduleData.schedule_id = existingPair.schedule_id; result = await updateSchedule(scheduleData); }
-        else result = await postSchedule(scheduleData);
-        if (result.success) { showNotification('Пара успешно вставлена', 'success'); const sel = getSelectedTeachers(); const monthVal = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`; await loadScheduleData(sel, monthVal); }
-        else showNotification('Ошибка при вставке: ' + (result.error || 'Неизвестная ошибка'), 'error');
-    } catch (error) { showNotification('Ошибка при вставке: ' + error.message, 'error'); }
+
+        if (existingPair && existingPair.schedule_id) {
+            scheduleData.schedule_id = existingPair.schedule_id;
+            result = await updateSchedule(scheduleData);
+        } else {
+            result = await postSchedule(scheduleData);
+        }
+
+        if (result.success) {
+            showNotification(`Пара вставлена → ${targetTeacher}`, 'success');
+            const sel = getSelectedTeachers();
+            const monthVal = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+            await loadScheduleData(sel, monthVal);
+
+            if (clipboardCut && clipboardPair?._sourceScheduleId) {
+                try {
+                    saveScrollPosition();
+                    await deleteSchedule(clipboardPair._sourceScheduleId);
+                    showNotification('Исходная пара удалена', 'info');
+                    await loadScheduleData(sel, monthVal);
+                } catch (e) {
+                    console.error('Error deleting source pair:', e);
+                }
+                clipboardCut = false;
+            }
+        } else {
+            showNotification('Ошибка при вставке: ' + (result.error || 'Неизвестная ошибка'), 'error');
+        }
+    } catch (error) {
+        showNotification('Ошибка при вставке: ' + error.message, 'error');
+    }
 };
 
 const deletePairFromCell = async (td) => {
@@ -2086,7 +2861,7 @@ const deletePairFromCell = async (td) => {
     const scheduleId = td.dataset.scheduleId;
     if (!scheduleId) { showNotification('В этой ячейке нет пары для удаления', 'warning'); return; }
     if (!confirm('Вы уверены, что хотите удалить эту пару?')) return;
-    try { saveScrollPosition(); await deleteSchedule(scheduleId); showNotification('Пара успешно удалена', 'success'); const sel = getSelectedTeachers(); const monthVal = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`; await loadScheduleData(sel, monthVal); } catch (error) { showNotification('Ошибка при удалении: ' + error.message, 'error'); }
+    try { skipAutoScroll = true; saveScrollPosition(); await deleteSchedule(scheduleId); showNotification('Пара успешно удалена', 'success'); const sel = getSelectedTeachers(); const monthVal = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`; await loadScheduleData(sel, monthVal); } catch (error) { showNotification('Ошибка при удалении: ' + error.message, 'error'); }
 };
 
 const selectCell = (td) => { if (selectedCell) selectedCell.classList.remove('cell-selected'); td.classList.add('cell-selected'); selectedCell = td; };
@@ -2095,38 +2870,83 @@ document.addEventListener('keydown', async (e) => {
     const activeElement = document.activeElement;
     const isInputFocused = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'SELECT' || activeElement.isContentEditable);
     if (isInputFocused) return;
+
+    // Ctrl+C — копировать
     if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
         e.preventDefault();
-        if (!selectedCell) { showNotification('Сначала выберите ячейку (кликните по ней)', 'warning'); return; }
-        copiedPair = getPairDataFromCell(selectedCell);
-        cutPair = null;
-        if (copiedPair) { showNotification('Пара скопирована (Ctrl+V для вставки)', 'success'); selectedCell.classList.add('cell-copied'); setTimeout(() => selectedCell.classList.remove('cell-copied'), 1000); }
-        else showNotification('В выбранной ячейке нет пары', 'warning');
+        if (!selectedCell) {
+            showNotification('Сначала выберите ячейку (кликните по ней)', 'warning');
+            return;
+        }
+
+        const pairData = getPairDataFromCell(selectedCell);
+        if (pairData) {
+            // Сохраняем scheduleId для операции "вырезать"
+            pairData._sourceScheduleId = selectedCell.dataset.scheduleId || null;
+            clipboardPair = pairData;
+            clipboardCut = false;
+
+            showNotification('📋 Пара скопирована (Ctrl+V для вставки любому преподавателю)', 'success');
+            selectedCell.classList.add('cell-copied');
+            setTimeout(() => selectedCell.classList.remove('cell-copied'), 1000);
+        } else {
+            showNotification('В выбранной ячейке нет пары', 'warning');
+        }
     }
+
+    // Ctrl+X — вырезать
     if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
         e.preventDefault();
-        if (!selectedCell) { showNotification('Сначала выберите ячейку (кликните по ней)', 'warning'); return; }
-        cutPair = getPairDataFromCell(selectedCell);
-        copiedPair = null;
-        if (cutPair) { showNotification('Пара вырезана (Ctrl+V для вставки). Исходная пара будет удалена после вставки.', 'info'); selectedCell.classList.add('cell-cut'); setTimeout(() => selectedCell.classList.remove('cell-cut'), 2000); }
-        else showNotification('В выбранной ячейке нет пары', 'warning');
+        if (!selectedCell) {
+            showNotification('Сначала выберите ячейку (кликните по ней)', 'warning');
+            return;
+        }
+
+        const pairData = getPairDataFromCell(selectedCell);
+        if (pairData) {
+            pairData._sourceScheduleId = selectedCell.dataset.scheduleId || null;
+            clipboardPair = pairData;
+            clipboardCut = true;
+
+            showNotification('✂️ Пара вырезана (Ctrl+V для вставки). Исходная удалится после вставки.', 'info');
+            selectedCell.classList.add('cell-cut');
+            setTimeout(() => selectedCell.classList.remove('cell-cut'), 2000);
+        } else {
+            showNotification('В выбранной ячейке нет пары', 'warning');
+        }
     }
+
+    // Ctrl+V — вставить
     if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
         e.preventDefault();
-        const pairToPaste = copiedPair || cutPair;
-        if (!pairToPaste) { showNotification('Нет скопированной пары. Сначала скопируйте (Ctrl+C) или вырежьте (Ctrl+X) пару.', 'warning'); return; }
-        if (!selectedCell) { showNotification('Сначала выберите ячейку для вставки (кликните по ней)', 'warning'); return; }
-        await pastePairToCell(selectedCell, pairToPaste);
-        if (cutPair && cutPair.scheduleId) { try { await deleteSchedule(cutPair.scheduleId); showNotification('Исходная пара удалена', 'info'); const sel = getSelectedTeachers(); const monthVal = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`; await loadScheduleData(sel, monthVal); } catch (error) { console.error('Error deleting cut pair:', error); } }
-        copiedPair = null;
-        cutPair = null;
+
+        if (!clipboardPair) {
+            showNotification('Нет скопированной пары. Сначала Ctrl+C или Ctrl+X.', 'warning');
+            return;
+        }
+        if (!selectedCell) {
+            showNotification('Сначала выберите ячейку для вставки (кликните по ней)', 'warning');
+            return;
+        }
+
+        await pastePairToCell(selectedCell, clipboardPair);
+
+        // НЕ очищаем буфер — можно вставлять много раз!
+        // Если это был Cut — очистим после успешной вставки внутри pastePairToCell
     }
-    if (e.key === 'Delete' && !e.ctrlKey && !e.metaKey && !e.altKey) { if (!selectedCell) return; e.preventDefault(); await deletePairFromCell(selectedCell); }
+
+    // Delete — удалить
+    if (e.key === 'Delete' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (!selectedCell) return;
+        e.preventDefault();
+        await deletePairFromCell(selectedCell);
+    }
 });
 
 /* ===== Инициализация ===== */
 const init = async () => {
     try {
+        GROUP_COLOR_CACHE.clear();
         const adminMode = isAdminMode();
         if (adminMode) { document.body.classList.add('admin-on', 'admin-mode'); adminInfo.style.display = 'block'; userInfo.style.display = 'none'; }
         else { document.body.classList.remove('admin-on', 'admin-mode'); adminInfo.style.display = 'none'; userInfo.style.display = 'block'; switchModeBtn.style.display = 'none'; if (addScheduleBtn) addScheduleBtn.style.display = 'none'; }

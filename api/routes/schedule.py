@@ -93,6 +93,16 @@ def _build_schedule_query():
         JOIN nnz_schedule nnz_s ON nnz_s.sh_var_id = fv.sh_var_id
         LEFT JOIN rooms r ON r.rid = ANY(nnz_s.rid)
         GROUP BY nnz_s.sheid
+    ),
+    schedule_with_groups AS (
+        SELECT 
+            nnz_s.sheid,
+            array_agg(DISTINCT g.name) AS all_groups,
+            array_agg(DISTINCT g.gid) AS all_gids
+        FROM filtered_variants fv
+        JOIN nnz_schedule nnz_s ON nnz_s.sh_var_id = fv.sh_var_id
+        JOIN groupname g ON g.gid = nnz_s.gid  -- тут gid одно число, не массив
+        GROUP BY nnz_s.sheid
     )
     SELECT 
         p_main.lastname || ' ' || p_main.firstname || ' ' || p_main.patronymic AS teacher_name,
@@ -117,7 +127,9 @@ def _build_schedule_query():
         COALESCE(swt.all_teachers, ARRAY[]::text[]) AS all_teachers,
         COALESCE(swt.all_teacher_mids, ARRAY[]::integer[]) AS all_teacher_mids,
         COALESCE(swr.all_rooms, ARRAY[]::text[]) AS all_rooms,
-        COALESCE(swr.all_rids, ARRAY[]::integer[]) AS all_rids
+        COALESCE(swr.all_rids, ARRAY[]::integer[]) AS all_rids,
+        COALESCE(swg.all_groups, ARRAY[]::text[]) AS all_groups,
+        COALESCE(swg.all_gids, ARRAY[]::integer[]) AS all_gids
     FROM filtered_variants fv
     JOIN nnz_schedule nnz_s ON nnz_s.sh_var_id = fv.sh_var_id
     JOIN people p_main ON p_main.mid = nnz_s.teacher_mid[1]  -- Основной преподаватель (первый в массиве)
@@ -128,6 +140,7 @@ def _build_schedule_query():
     JOIN periods pr ON nnz_s.period = pr.lid
     LEFT JOIN schedule_with_teachers swt ON swt.sheid = nnz_s.sheid
     LEFT JOIN schedule_with_rooms swr ON swr.sheid = nnz_s.sheid
+    LEFT JOIN schedule_with_groups swg ON swg.sheid = nnz_s.sheid
     WHERE p_main.mid = ANY(%s)
     AND fv.week_start_date + (nnz_s.day_of_week - 1) * INTERVAL '1 day' BETWEEN %s AND %s
     ORDER BY event_date, period_name

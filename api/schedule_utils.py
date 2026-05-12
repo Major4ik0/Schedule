@@ -127,6 +127,8 @@ def format_schedule_data(data):
             'teachers': row.get('all_teachers') or [],
             'teacher_mids': row.get('all_teacher_mids') or [],
             'rooms': row.get('all_rooms') or [],
+            'groups': row.get('all_groups') or [],
+            'gids': row.get('all_gids') or [],
             'rids': row.get('all_rids') or [],
         }
 
