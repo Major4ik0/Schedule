@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/chat_widget.css') }}">
 <!-- HTML виджета (вставь HTML из шага 1) -->
 <script src="{{ url_for('static', filename='js/ai_widget.js') }}"></script>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%233b82f6;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%238b5cf6;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23grad)'/%3E%3Crect x='20' y='50' width='12' height='35' rx='3' fill='white' opacity='0.9'/%3E%3Crect x='38' y='35' width='12' height='50' rx='3' fill='white' opacity='0.9'/%3E%3Crect x='56' y='20' width='12' height='65' rx='3' fill='white' opacity='0.9'/%3E%3Crect x='74' y='45' width='12' height='40' rx='3' fill='white' opacity='0.9'/%3E%3Cpolyline points='26,65 44,45 62,30 80,50' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round'/%3E%3Ccircle cx='26' cy='65' r='3' fill='white'/%3E%3Ccircle cx='44' cy='45' r='3' fill='white'/%3E%3Ccircle cx='62' cy='30' r='3' fill='white'/%3E%3Ccircle cx='80' cy='50' r='3' fill='white'/%3E%3C/svg%3E">
 </head>
 <body data-is-admin="{{ 'true' if is_admin else 'false' }}">
     <!-- Современная навигация -->
@@ -194,48 +195,12 @@
                         <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
                     </svg>
                     <span>Типы занятий</span>
+                    <button class="btn-select-all-types" id="selectAllTypes" style="margin-left: auto; padding: 2px 8px; font-size: 11px;">Выбрать все</button>
+                    <button class="btn-deselect-all-types" id="deselectAllTypes" style="padding: 2px 8px; font-size: 11px;">Снять все</button>
                 </div>
                 <div class="types-grid" id="typesGrid">
-                    <label class="type-checkbox">
-                        <input type="checkbox" value="Л" checked>
-                        <span class="type-dot lecture"></span>
-                        <span>Лекции</span>
-                    </label>
-                    <label class="type-checkbox">
-                        <input type="checkbox" value="ПЗ" checked>
-                        <span class="type-dot practice"></span>
-                        <span>Практические</span>
-                    </label>
-                    <label class="type-checkbox">
-                        <input type="checkbox" value="С" checked>
-                        <span class="type-dot seminar"></span>
-                        <span>Семинары</span>
-                    </label>
-                    <label class="type-checkbox">
-                        <input type="checkbox" value="ЛР" checked>
-                        <span class="type-dot lab"></span>
-                        <span>Лабораторные</span>
-                    </label>
-                    <label class="type-checkbox">
-                        <input type="checkbox" value="Э" checked>
-                        <span class="type-dot exam"></span>
-                        <span>Экзамены</span>
-                    </label>
-                    <label class="type-checkbox">
-                        <input type="checkbox" value="КуР" checked>
-                        <span class="type-dot course"></span>
-                        <span>Курсовые работы</span>
-                    </label>
-                    <label class="type-checkbox">
-                        <input type="checkbox" value="З" checked>
-                        <span class="type-dot test"></span>
-                        <span>Зачеты</span>
-                    </label>
-                    <label class="type-checkbox">
-                        <input type="checkbox" value="КР" checked>
-                        <span class="type-dot control"></span>
-                        <span>Контрольные</span>
-                    </label>
+                    <!-- Типы будут загружены динамически из БД -->
+                    <div class="loading-types">Загрузка типов занятий...</div>
                 </div>
             </div>
 
@@ -376,7 +341,7 @@
                                 <th>Курсовые</th>
                                 <th>Всего часов</th>
                                 <th>|</th>
-                                <th>Действия</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody id="tableBody">
@@ -433,31 +398,33 @@
                 <div class="analytics-grid">
                     <div class="analytics-card">
                         <div class="analytics-header">
-                            <div class="analytics-icon">🎯</div>
+                            <div class="analytics-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                                    <circle cx="12" cy="12" r="4"/>
+                                </svg>
+                            </div>
                             <h3>Распределение по типам занятий</h3>
                         </div>
                         <div class="type-distribution" id="typeDistribution"></div>
                     </div>
                     <div class="analytics-card">
-                        <div class="analytics-header">
-                            <div class="analytics-icon">🏛️</div>
-                            <h3>Распределение по факультетам</h3>
+                        <div class="analytics-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M2 6h20M2 12h20M2 18h20"/>
+                                <rect x="4" y="4" width="16" height="16" rx="2"/>
+                            </svg>
                         </div>
                         <div class="faculty-distribution" id="facultyDistribution"></div>
                     </div>
                     <div class="analytics-card">
-                        <div class="analytics-header">
-                            <div class="analytics-icon">📊</div>
-                            <h3>Топ преподавателей по нагрузке</h3>
+                        <div class="analytics-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M18 20V10M12 20V4M6 20v-6"/>
+                                <rect x="2" y="2" width="20" height="20" rx="2"/>
+                            </svg>
                         </div>
                         <div class="top-teachers" id="topTeachers"></div>
-                    </div>
-                    <div class="analytics-card">
-                        <div class="analytics-header">
-                            <div class="analytics-icon">⚡</div>
-                            <h3>Коэффициент загрузки</h3>
-                        </div>
-                        <div class="load-factor" id="loadFactor"></div>
                     </div>
                 </div>
             </div>
@@ -502,7 +469,14 @@
     <div class="ai-chat" id="aiChat">
         <div class="ai-chat-header">
             <div class="ai-chat-header-left">
-                <div class="ai-chat-avatar">🤖</div>
+                <div class="ai-chat-avatar">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"/>
+                        <circle cx="8" cy="10" r="1.5" fill="currentColor"/>
+                        <circle cx="16" cy="10" r="1.5" fill="currentColor"/>
+                        <path d="M8 15a4 4 0 0 0 8 0"/>
+                    </svg>
+                </div>
                 <div class="ai-chat-header-info">
                     <h3>AI Ассистент</h3>
                     <p id="aiContextLabel">Готов помочь</p>

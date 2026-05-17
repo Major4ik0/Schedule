@@ -3,4 +3,5 @@ __pycache__/
 .idea/
 .DS_Store
 test.py
+db_test.py
 schedule_v*.tar

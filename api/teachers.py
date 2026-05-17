@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from flask import Blueprint, jsonify
 
+from api.schedule_utils import get_cached_palette, hash_string
 from db.database import DataBase
 
 api_th = Blueprint('api', __name__, url_prefix='/api')
