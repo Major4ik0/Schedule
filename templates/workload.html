@@ -195,8 +195,9 @@
                         <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
                     </svg>
                     <span>Типы занятий</span>
-                    <button class="btn-select-all-types" id="selectAllTypes" style="margin-left: auto; padding: 2px 8px; font-size: 11px;">Выбрать все</button>
-                    <button class="btn-deselect-all-types" id="deselectAllTypes" style="padding: 2px 8px; font-size: 11px;">Снять все</button>
+                    <button class="btn-select-all-types" id="selectAllTypes">Выбрать все</button>
+                    <button class="btn-deselect-all-types" id="deselectAllTypes">Снять все</button>
+                    <span class="lesson-types-info" id="selectedTypesCount">Выбрано: 0</span>
                 </div>
                 <div class="types-grid" id="typesGrid">
                     <!-- Типы будут загружены динамически из БД -->
@@ -409,20 +410,27 @@
                         <div class="type-distribution" id="typeDistribution"></div>
                     </div>
                     <div class="analytics-card">
-                        <div class="analytics-icon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M2 6h20M2 12h20M2 18h20"/>
-                                <rect x="4" y="4" width="16" height="16" rx="2"/>
-                            </svg>
+                        <div class="analytics-header">
+                            <div class="analytics-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M2 6h20M2 12h20M2 18h20"/>
+                                    <rect x="4" y="4" width="16" height="16" rx="2"/>
+                                </svg>
+
+                            </div>
+                            <h3>Распределение по факультетам</h3>
                         </div>
                         <div class="faculty-distribution" id="facultyDistribution"></div>
                     </div>
                     <div class="analytics-card">
-                        <div class="analytics-icon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M18 20V10M12 20V4M6 20v-6"/>
-                                <rect x="2" y="2" width="20" height="20" rx="2"/>
-                            </svg>
+                        <div class="analytics-header">
+                            <div class="analytics-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M18 20V10M12 20V4M6 20v-6"/>
+                                    <rect x="2" y="2" width="20" height="20" rx="2"/>
+                                </svg>
+                            </div>
+                            <h3>Статистика всех преподавателей</h3>
                         </div>
                         <div class="top-teachers" id="topTeachers"></div>
                     </div>

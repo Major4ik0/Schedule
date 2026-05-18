@@ -498,9 +498,6 @@ def get_base_workload_data(teacher_ids, faculty_id, lesson_types, date_from, dat
 
     params = [academic_year_start, date_from, date_to]
     raw_lessons = db.fetchall(query, tuple(params))
-
-    print(f"Found {len(raw_lessons)} raw lessons")
-
     result = []
     for lesson in raw_lessons:
         result.append({
@@ -516,13 +513,11 @@ def get_base_workload_data(teacher_ids, faculty_id, lesson_types, date_from, dat
             'hours': 2
         })
 
-    print(f"After processing: {len(result)} lessons")
 
     # Фильтрация по преподавателям (только ПМК 1 и 2)
     if teacher_ids:
         teacher_ids_set = set(map(int, teacher_ids))
         result = [r for r in result if r['teacher_id'] in teacher_ids_set]
-        print(f"After teacher filter: {len(result)} lessons")
 
     # Фильтрация по факультету
     if faculty_id != 'all':
@@ -531,17 +526,10 @@ def get_base_workload_data(teacher_ids, faculty_id, lesson_types, date_from, dat
             result = [r for r in result if r['faculty_id'] == 0]
         else:
             result = [r for r in result if r['faculty_id'] == faculty_id_int]
-        print(f"After faculty filter: {len(result)} lessons")
 
     # Фильтрация по типам занятий
     if lesson_types:
         result = [r for r in result if r['lesson_type'] in lesson_types]
-        print(f"After lesson type filter: {len(result)} lessons")
-
-    # Выводим пример для отладки
-    if result:
-        print(
-            f"Sample: teacher={result[0]['teacher_name']}, faculty={result[0]['faculty_name']}, type={result[0]['lesson_type']}")
 
     return result
 
@@ -598,8 +586,6 @@ def get_workload():
             last_day = (first_day + timedelta(days=32)).replace(day=1) - timedelta(days=1)
             date_from = first_day.strftime('%Y-%m-%d')
             date_to = last_day.strftime('%Y-%m-%d')
-
-        print(f"Period: {date_from} - {date_to}")
 
         # Получаем базовые данные
         lessons = get_base_workload_data(teacher_ids, faculty_id, lesson_types, date_from, date_to)
@@ -739,8 +725,6 @@ def get_workload():
             'averageHours': round(total_hours_all / len(formatted_data), 1) if len(formatted_data) > 0 else 0
         }
 
-        print(
-            f"Stats: total_hours={stats['totalHours']}, total_lessons={stats['totalLessons']}, teachers={stats['teacherCount']}")
 
         return jsonify({
             'workload': formatted_data,
@@ -799,8 +783,6 @@ def get_monthly_trend():
                     data_by_month[idx] += lesson['hours']
 
         total_by_months = sum(data_by_month.values())
-
-        print(f"Monthly trend - total hours: {total_by_months}, months data: {data_by_month}")
 
         return jsonify({
             'labels': month_names,

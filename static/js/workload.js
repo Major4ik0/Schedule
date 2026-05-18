@@ -64,12 +64,15 @@ const WorkloadApp = {
         }
 
         container.innerHTML = this.data.lessonTypes.map(type => `
-            <label class="type-checkbox">
+            <label class="type-checkbox" title="${type.name}">
                 <input type="checkbox" value="${type.alias}" ${this.config.selectedTypes.includes(type.alias) ? 'checked' : ''}>
                 <span class="type-dot" style="background: ${type.color}"></span>
-                <span>${type.name} (${type.alias})</span>
+                <span>${type.alias} - ${type.name.length > 30 ? type.name.substring(0, 27) + '...' : type.name}</span>
             </label>
         `).join('');
+
+        // Обновляем счетчик
+        this.updateSelectedTypesCount();
 
         // Добавляем обработчики
         document.querySelectorAll('#typesGrid .type-checkbox input').forEach(cb => {
@@ -77,6 +80,7 @@ const WorkloadApp = {
                 this.config.selectedTypes = Array.from(
                     document.querySelectorAll('#typesGrid .type-checkbox input:checked')
                 ).map(cb => cb.value);
+                this.updateSelectedTypesCount();
             });
         });
 
@@ -90,6 +94,7 @@ const WorkloadApp = {
                     cb.checked = true;
                 });
                 this.config.selectedTypes = this.data.lessonTypes.map(t => t.alias);
+                this.updateSelectedTypesCount();
             };
         }
 
@@ -99,7 +104,18 @@ const WorkloadApp = {
                     cb.checked = false;
                 });
                 this.config.selectedTypes = [];
+                this.updateSelectedTypesCount();
             };
+        }
+    },
+
+    // Добавьте новый метод для обновления счетчика
+    updateSelectedTypesCount() {
+        const countSpan = document.getElementById('selectedTypesCount');
+        if (countSpan) {
+            const selectedCount = this.config.selectedTypes.length;
+            const totalCount = this.data.lessonTypes.length;
+            countSpan.textContent = `Выбрано: ${selectedCount}/${totalCount}`;
         }
     },
 
