@@ -959,6 +959,10 @@ const openManualAddModal = () => {
     ctx = null;
     isManualAdd = true;
 
+    if (window._editingContext) {
+        window._editingContext = null;
+    }
+
     selectedTeachersModal.clear();
     selectedRoomsModal.clear();
     selectedGroupsModal.clear();
@@ -978,8 +982,21 @@ const openManualAddModal = () => {
     f_date.value = new Date().toISOString().split('T')[0];
     f_pair.value = '';
 
-    document.querySelectorAll('.manual-field').forEach(el => el.style.display = 'block');
+    // Очищаем теги
+    const teacherTagsContainer = document.getElementById('selectedTeachersTags');
+    const roomTagsContainer = document.getElementById('selectedRoomsTags');
+    const groupTagsContainer = document.getElementById('selectedGroupsTags');
+    if (teacherTagsContainer) teacherTagsContainer.innerHTML = '';
+    if (roomTagsContainer) roomTagsContainer.innerHTML = '';
+    if (groupTagsContainer) groupTagsContainer.innerHTML = '';
 
+    // === ВАЖНО: ПЕРЕРИСОВЫВАЕМ СПИСКИ, ЧТОБЫ УБРАТЬ ГАЛОЧКИ ===
+    const activePmk = document.querySelector('#pmkTabs .pmk-tab.active')?.dataset?.pmk || '1';
+    renderTeacherMultiList('', activePmk);
+    renderRoomMultiList('', 'all');
+    renderGroupMultiList('', 'all');
+
+    document.querySelectorAll('.manual-field').forEach(el => el.style.display = 'block');
     btnDelete.style.display = 'none';
 
     openModal('Добавление занятия', null);
@@ -1088,7 +1105,7 @@ tables.addEventListener('click', async (e) => {
                 if (pair.teachers && pair.teachers.length > 0) {
                     pair.teachers.forEach(t => selectedTeachersModal.add(t));
                 } else if (teacher) {
-                    selectedTeachersModal.add(teacher);
+                    // selectedTeachersModal.add(teacher);
                 }
                 renderTeacherTags();
                 updateBadge('teacher');
@@ -2340,21 +2357,91 @@ async function preloadGroupColors(data) {
 
 const populateJumpTeacher = async () => {
     const sel = getSelectedTeachers();
+
     const railCategoriesHTML = Object.keys(TEACHER_CATEGORIES).map(category => {
-        const categoryNames = {'1': 'ПМК 1', '2': 'ПМК 2', 'other': 'Другие'};
+        const categoryNames = {
+            '1': 'ПМК 1',
+            '2': 'ПМК 2',
+            'other': 'Другие'
+        };
         const categoryName = categoryNames[category] || `Категория ${category}`;
         const teachersInCategory = TEACHER_CATEGORIES[category].filter(t => sel.includes(t));
+
         if (teachersInCategory.length === 0) return '';
+
         const isExpanded = RAIL_CATEGORIES_STATE[category] !== false;
-        const teachersHTML = teachersInCategory.map(n => `<div class="rail-item" data-target="${teacherId(n)}"><span class="dot" style="background:${TEACHER_COLORS[n] || '#ccc'}"></span><span class="rail-item-name">${n}</span></div>`).join('');
-        return `<div class="rail-category"><div class="rail-category-title ${isExpanded ? 'expanded' : 'collapsed'}" data-category="${category}"><span class="rail-category-arrow">${isExpanded ? '▼' : '▶'}</span>${categoryName}<span class="rail-category-count">(${teachersInCategory.length})</span></div>${isExpanded ? `<div class="rail-category-content">${teachersHTML}</div>` : ''}</div>`;
+
+        const teachersHTML = teachersInCategory.map(n => `
+            <div class="rail-item" data-target="${teacherId(n)}">
+                <span class="dot" style="background:${TEACHER_COLORS[n] || '#ccc'}"></span>
+                <span class="rail-item-name">${n}</span>
+            </div>
+        `).join('');
+
+        return `<div class="rail-category">
+            <div class="rail-category-title ${isExpanded ? 'expanded' : 'collapsed'}" data-category="${category}">
+                <span class="rail-category-arrow">${isExpanded ? '▼' : '▶'}</span>
+                ${categoryName}
+                <span class="rail-category-count">(${teachersInCategory.length})</span>
+            </div>
+            ${isExpanded ? `<div class="rail-category-content">${teachersHTML}</div>` : ''}
+        </div>`;
     }).join('');
+
     railCategories.innerHTML = railCategoriesHTML;
+
     railCategories.querySelectorAll('.rail-category-title').forEach(title => {
-        title.addEventListener('click', (e) => { e.stopPropagation(); const category = title.dataset.category; RAIL_CATEGORIES_STATE[category] = !title.classList.contains('expanded'); populateJumpTeacher(); });
+        title.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const category = title.dataset.category;
+            const isExpanded = title.classList.contains('expanded');
+
+            RAIL_CATEGORIES_STATE[category] = !isExpanded;
+
+            populateJumpTeacher();
+        });
     });
+
     railCategories.querySelectorAll('.rail-item').forEach(item => {
-        item.addEventListener('click', () => { const id = item.dataset.target; const el = document.getElementById(id); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' }); setTimeout(() => { window.scrollTo({ top: window.pageYOffset - 50, behavior: 'smooth' }); }, 300); } });
+        item.addEventListener('click', () => {
+            const id = item.dataset.target;
+            const el = document.getElementById(id);
+
+            if (el) {
+                const originalPosition = window.getComputedStyle(el).position;
+                const originalTop = window.getComputedStyle(el).top;
+                const originalZIndex = window.getComputedStyle(el).zIndex;
+
+                if (el.classList.contains('section-head')) {
+                    el.style.position = 'relative';
+                    el.style.top = '0';
+                    el.style.zIndex = 'auto';
+                }
+
+                el.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                    inline: 'nearest'
+                });
+
+                setTimeout(() => {
+                    const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+                    window.scrollTo({
+                        top: currentScroll - 50,
+                        behavior: 'smooth'
+                    });
+                }, 300);
+
+                setTimeout(() => {
+                    if (el.classList.contains('section-head')) {
+                        el.style.position = originalPosition;
+                        el.style.top = originalTop;
+                        el.style.zIndex = originalZIndex;
+                    }
+                }, 10);
+
+            }
+        });
     });
 };
 
@@ -2848,6 +2935,8 @@ const pastePairToCell = async (td, pairInfo) => {
                 }
                 clipboardCut = false;
             }
+            ctx = null;
+            isManualAdd = false;
         } else {
             showNotification('Ошибка при вставке: ' + (result.error || 'Неизвестная ошибка'), 'error');
         }

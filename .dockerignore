@@ -10,3 +10,4 @@ test.py
 db_test.py
 .dockerignore
 testing_version_AI/
+schedule_v*.tar
