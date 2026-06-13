@@ -7,6 +7,8 @@ const GROUP_COLOR_CACHE = new Map();
 let clipboardPair = null;  // хранит данные скопированной пары
 let clipboardCut = false;  // флаг: была ли пара вырезана
 
+const DEFAULT_ROOM_NAME = '--';
+
 /* ===== Утилиты дат ===== */
 const pad2 = (n) => String(n).padStart(2, '0'),
     isoFromYMD = (y, m0, d) => `${y}-${pad2(m0 + 1)}-${pad2(d)}`,
@@ -25,7 +27,91 @@ const formatMonthTitle = (value) => {
 };
 
 let pendingScrollRestore = null;
+let pendingScrollRestoreAfterSave = null;
 
+const saveExactScrollPosition = () => {
+    const wrap = document.querySelector('.table-wrap');
+    if (!wrap) return null;
+
+    // Находим первый видимый заголовок преподавателя
+    const sectionHeads = wrap.querySelectorAll('.section-head, .teacher-title');
+    let targetTeacher = null;
+    let targetTeacherId = null;
+
+    for (const head of sectionHeads) {
+        const rect = head.getBoundingClientRect();
+        if (rect.top >= 0 && rect.top < 300) {
+            targetTeacher = head.textContent.trim();
+            targetTeacherId = head.id;
+            break;
+        }
+    }
+
+    // Если не нашли видимый, берем ближайший к верху
+    if (!targetTeacher && sectionHeads.length > 0) {
+        let closestHead = null;
+        let minDistance = Infinity;
+        sectionHeads.forEach(head => {
+            const rect = head.getBoundingClientRect();
+            const distance = Math.abs(rect.top);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestHead = head;
+            }
+        });
+        if (closestHead) {
+            targetTeacher = closestHead.textContent.trim();
+            targetTeacherId = closestHead.id;
+        }
+    }
+
+    return {
+        scrollLeft: wrap.scrollLeft,
+        targetTeacher: targetTeacher,
+        targetTeacherId: targetTeacherId,
+        timestamp: Date.now()
+    };
+};
+
+const restoreExactScrollPosition = (savedPos) => {
+    if (!savedPos) return false;
+
+    const wrap = document.querySelector('.table-wrap');
+    if (!wrap) return false;
+
+    // Восстанавливаем горизонтальный скролл
+    if (savedPos.scrollLeft) {
+        wrap.scrollLeft = savedPos.scrollLeft;
+    }
+
+    // Ищем преподавателя
+    let targetElement = null;
+    if (savedPos.targetTeacherId) {
+        targetElement = document.getElementById(savedPos.targetTeacherId);
+    }
+    if (!targetElement && savedPos.targetTeacher) {
+        const allHeads = document.querySelectorAll('.section-head, .teacher-title');
+        for (const head of allHeads) {
+            if (head.textContent.trim() === savedPos.targetTeacher) {
+                targetElement = head;
+                break;
+            }
+        }
+    }
+
+    if (targetElement) {
+        targetElement.scrollIntoView({ behavior: 'auto', block: 'start' });
+        const headerOffset = 30;
+        const elementPosition = targetElement.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        window.scrollTo({ top: offsetPosition, behavior: 'auto' });
+        return true;
+    }
+
+    return false;
+};
+
+// В saveScrollPosition, добавить сохранение в localStorage:
 const saveScrollPosition = () => {
     const wrap = document.querySelector('.table-wrap');
     if (!wrap) {
@@ -33,7 +119,6 @@ const saveScrollPosition = () => {
         return;
     }
 
-    // Находим видимого преподавателя (чей заголовок ближе всего к верху)
     const sectionHeads = wrap.querySelectorAll('.section-head, .teacher-title');
     let closestTeacher = null;
     let minDistance = Infinity;
@@ -51,12 +136,29 @@ const saveScrollPosition = () => {
         tableLeft: wrap.scrollLeft,
         windowTop: window.scrollY,
         windowLeft: window.scrollX,
-        targetTeacher: closestTeacher,  // ← запоминаем преподавателя
+        targetTeacher: closestTeacher,
         offset: sectionHeads.length > 0 ? sectionHeads[0].getBoundingClientRect().top : 0
     };
 
+    // Сохраняем в localStorage
+    try {
+        localStorage.setItem('lastScrollPosition', JSON.stringify(pendingScrollRestore));
+    } catch(e) {}
+
     console.log('📍 Сохранена позиция:', pendingScrollRestore.targetTeacher);
 };
+
+// При загрузке страницы восстанавливаем из localStorage
+window.addEventListener('load', () => {
+    try {
+        const saved = localStorage.getItem('lastScrollPosition');
+        if (saved) {
+            pendingScrollRestore = JSON.parse(saved);
+            setTimeout(() => forceRestoreScroll(), 300);
+            // Не удаляем сразу, чтобы можно было использовать при переключении месяцев
+        }
+    } catch(e) {}
+});
 
 const forceRestoreScroll = () => {
     if (!pendingScrollRestore) return;
@@ -64,15 +166,13 @@ const forceRestoreScroll = () => {
     const wrap = document.querySelector('.table-wrap');
     if (!wrap) return;
 
-    // Пытаемся найти того же преподавателя по ID
+    // Пытаемся найти того же преподавателя
     let targetElement = null;
 
     if (pendingScrollRestore.targetTeacher) {
-        // Ищем по ID (для section-head) или по содержимому (для teacher-title)
         targetElement = document.getElementById(pendingScrollRestore.targetTeacher);
 
         if (!targetElement) {
-            // Ищем по тексту
             const allHeads = wrap.querySelectorAll('.section-head, .teacher-title');
             allHeads.forEach(head => {
                 if (head.textContent.trim() === pendingScrollRestore.targetTeacher) {
@@ -83,18 +183,20 @@ const forceRestoreScroll = () => {
     }
 
     if (targetElement) {
-        // Прокручиваем к найденному преподавателю
         targetElement.scrollIntoView({ behavior: 'auto', block: 'start' });
+
+        // Коррекция
+        const headerOffset = 30;
+        const elementPosition = targetElement.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        window.scrollTo({ top: offsetPosition, behavior: 'auto' });
     }
 
     // Восстанавливаем горизонтальный скролл
     setTimeout(() => {
         if (wrap) wrap.scrollLeft = pendingScrollRestore.tableLeft || 0;
-    }, 50);
+    }, 100);
 
-    console.log('📍 Восстановлена позиция к:', pendingScrollRestore.targetTeacher);
-
-    // Не сбрасываем pendingScrollRestore сразу — может понадобиться ещё
     setTimeout(() => {
         pendingScrollRestore = null;
     }, 1000);
@@ -150,18 +252,21 @@ const loadModalData = async () => {
             fetch(`${API_BASE}/getGroups`)
         ]);
         DISCIPLINES = await disciplinesRes.json();
-        CLASSROOMS = await classroomsRes.json();
+        let rawClassrooms = await classroomsRes.json();
         LESSON_TYPES = await lessonTypesRes.json();
         GROUPS = await groupsRes.json();
         await loadFaculties();
 
-        // Строим категории дисциплин по префиксу алиаса
+        // Проверяем, есть ли уже "--" в списке
+        const hasDefaultRoom = rawClassrooms.some(r => r.short_name === '--');
+        if (!hasDefaultRoom) {
+            // Добавляем "--" в начало списка
+            rawClassrooms.unshift({ id: -1, short_name: '--' });
+        }
+        CLASSROOMS = rawClassrooms;
+
         buildCourseCategories();
-
         populateSelect('f_type', LESSON_TYPES, 'id', 'alias');
-        // f_course больше не select, скрываем или удаляем из DOM
-        // populateSelect('f_course', DISCIPLINES, 'id', 'alias');
-
         initMultiSelect();
         initCourseSelect();
     } catch (error) {
@@ -269,14 +374,12 @@ const renderCourseList = (filter = '', prefixFilter = 'all') => {
     if (!courseList) return;
 
     let filtered;
-
     if (prefixFilter === 'all') {
         filtered = DISCIPLINES;
     } else {
         filtered = COURSE_CATEGORIES[prefixFilter] || [];
     }
 
-    // Поиск по названию или алиасу
     if (filter) {
         const searchLower = filter.toLowerCase();
         filtered = filtered.filter(c =>
@@ -285,7 +388,6 @@ const renderCourseList = (filter = '', prefixFilter = 'all') => {
         );
     }
 
-    // Сортируем по алиасу
     filtered = [...filtered].sort((a, b) => a.alias.localeCompare(b.alias, 'ru'));
 
     if (filtered.length === 0) {
@@ -293,6 +395,7 @@ const renderCourseList = (filter = '', prefixFilter = 'all') => {
         return;
     }
 
+    // ВАЖНО: используем ТЕКУЩИЙ selectedCourseId
     courseList.innerHTML = filtered.map(c => {
         const isSelected = selectedCourseId === c.id;
         return `
@@ -642,6 +745,12 @@ switchModeBtn.addEventListener('click', () => {
 
 /* ===== Инициализация множественного выбора ===== */
 const initMultiSelect = () => {
+    // Очищаем глобальные переменные при инициализации
+    selectedTeachersModal.clear();
+    selectedRoomsModal.clear();
+    selectedGroupsModal.clear();
+    selectedCourseId = null;
+
     setupMultiSelectTeacher();
     setupMultiSelectRoom();
     setupMultiSelectGroup();
@@ -670,14 +779,25 @@ const setupMultiSelectTeacher = () => {
 
 const setupMultiSelectRoom = () => {
     if (!roomSearch || !roomDropdown || !roomList) return;
+
     const renderBuildingTabs = () => {
         const tabsContainer = document.getElementById('buildingTabs');
         if (!tabsContainer) return;
         const buildings = new Set();
-        CLASSROOMS.forEach(r => buildings.add(getRoomBuilding(r.short_name)));
+
+        // Показываем все аудитории, включая "--"
+        CLASSROOMS.forEach(r => {
+            if (r.short_name) {
+                buildings.add(getRoomBuilding(r.short_name));
+            }
+        });
+
         let html = '<button class="pmk-tab active" data-building="all">Все</button>';
-        [...buildings].sort().forEach(b => { html += `<button class="pmk-tab" data-building="${b}">${b}</button>`; });
+        [...buildings].sort().forEach(b => {
+            html += `<button class="pmk-tab" data-building="${b}">${b}</button>`;
+        });
         tabsContainer.innerHTML = html;
+
         tabsContainer.querySelectorAll('.pmk-tab').forEach(tab => {
             tab.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -688,11 +808,29 @@ const setupMultiSelectRoom = () => {
             });
         });
     };
+
     renderBuildingTabs();
-    roomSearch.addEventListener('focus', () => { roomDropdown.style.display = 'block'; renderRoomMultiList(roomSearch.value); });
-    roomSearch.addEventListener('input', (e) => { roomDropdown.style.display = 'block'; renderRoomMultiList(e.target.value); });
-    roomSearch.addEventListener('click', (e) => { e.stopPropagation(); roomDropdown.style.display = 'block'; renderRoomMultiList(roomSearch.value); });
-    renderRoomMultiList('');
+
+    roomSearch.addEventListener('focus', () => {
+        roomDropdown.style.display = 'block';
+        const activeBuilding = document.querySelector('#buildingTabs .pmk-tab.active')?.dataset?.building || 'all';
+        renderRoomMultiList(roomSearch.value, activeBuilding);
+    });
+
+    roomSearch.addEventListener('input', (e) => {
+        roomDropdown.style.display = 'block';
+        const activeBuilding = document.querySelector('#buildingTabs .pmk-tab.active')?.dataset?.building || 'all';
+        renderRoomMultiList(e.target.value, activeBuilding);
+    });
+
+    roomSearch.addEventListener('click', (e) => {
+        e.stopPropagation();
+        roomDropdown.style.display = 'block';
+        const activeBuilding = document.querySelector('#buildingTabs .pmk-tab.active')?.dataset?.building || 'all';
+        renderRoomMultiList(roomSearch.value, activeBuilding);
+    });
+
+    renderRoomMultiList('', 'all');
 };
 
 const setupMultiSelectGroup = () => {
@@ -763,15 +901,44 @@ document.addEventListener('click', (e) => {
 const updateBadge = (type) => {
     let selectedSet, badgeEl, itemCount;
     switch(type) {
-        case 'teacher': selectedSet = selectedTeachersModal; badgeEl = teacherBadge; itemCount = Object.keys(TEACHERS_LIST).length; break;
-        case 'room': selectedSet = selectedRoomsModal; badgeEl = roomBadge; itemCount = CLASSROOMS.length; break;
-        case 'group': selectedSet = selectedGroupsModal; badgeEl = groupBadge; itemCount = GROUPS.length; break;
+        case 'teacher':
+            selectedSet = selectedTeachersModal;
+            badgeEl = teacherBadge;
+            itemCount = Object.keys(TEACHERS_LIST).length;
+            break;
+        case 'room':
+            selectedSet = selectedRoomsModal;
+            badgeEl = roomBadge;
+            // Если ничего не выбрано, считаем что выбрана "--"
+            const effectiveCount = selectedSet.size === 0 ? 1 : selectedSet.size;
+            itemCount = CLASSROOMS.length;
+            if (badgeEl) {
+                if (effectiveCount === 0) badgeEl.textContent = 'Ничего не выбрано';
+                else if (effectiveCount === itemCount) badgeEl.textContent = `Выбрано все (${effectiveCount})`;
+                else badgeEl.textContent = `Выбрано: ${effectiveCount}`;
+            }
+            return;
+        case 'group':
+            selectedSet = selectedGroupsModal;
+            badgeEl = groupBadge;
+            itemCount = GROUPS.length;
+            break;
     }
     if (!badgeEl) return;
     const count = selectedSet.size;
     if (count === 0) badgeEl.textContent = 'Ничего не выбрано';
     else if (count === itemCount) badgeEl.textContent = `Выбрано все (${count})`;
     else badgeEl.textContent = `Выбрано: ${count}`;
+};
+
+const getSelectedRoomsForSubmit = () => {
+    // Возвращаем только реальные аудитории (без "--")
+    const realRooms = Array.from(selectedRoomsModal).filter(id => {
+        const room = CLASSROOMS.find(r => r.id.toString() === id);
+        return room && room.short_name !== '--';
+    });
+
+    return realRooms.map(id => parseInt(id));
 };
 
 const renderTeacherMultiList = (filter = '', pmkFilter = 'all') => {
@@ -788,8 +955,10 @@ const renderTeacherMultiList = (filter = '', pmkFilter = 'all') => {
         container.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--muted); font-size: 12px;">Ничего не найдено</div>';
         return;
     }
+
+    // ВАЖНО: каждый раз пересоздаем HTML на основе ТЕКУЩЕГО selectedTeachersModal
     container.innerHTML = filtered.map(name => {
-        const isSelected = selectedTeachersModal.has(name);
+        const isSelected = selectedTeachersModal.has(name);  // ← здесь берем актуальное состояние
         const categoryStr = String(TEACHERS_LIST[name]?.category || 'other');
         const pmkLabel = categoryStr === '1' ? 'ПМК 1' : categoryStr === '2' ? 'ПМК 2' : 'Другое';
         return `<div class="multi-list-item ${isSelected ? 'selected' : ''}" data-name="${escapeHtml(name)}">
@@ -847,53 +1016,137 @@ const getRoomBuilding = (shortName) => {
 const renderRoomMultiList = (filter = '', buildingFilter = 'all') => {
     const container = document.getElementById('roomList');
     if (!container) return;
-    const filtered = CLASSROOMS.filter(r => {
+
+    let filtered = CLASSROOMS.filter(r => {
         const matchesSearch = !filter || r.short_name.toLowerCase().includes(filter.toLowerCase());
         const matchesBuilding = buildingFilter === 'all' || getRoomBuilding(r.short_name) === buildingFilter;
         return matchesSearch && matchesBuilding;
     });
+
+    // Сортируем так, чтобы "--" была первой
+    filtered = filtered.sort((a, b) => {
+        if (a.short_name === '--') return -1;
+        if (b.short_name === '--') return 1;
+        return a.short_name.localeCompare(b.short_name);
+    });
+
     if (filtered.length === 0) {
         container.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--muted); font-size: 12px;">Ничего не найдено</div>';
         return;
     }
+
     container.innerHTML = filtered.map(r => {
-        const isSelected = selectedRoomsModal.has(r.id.toString());
-        return `<div class="multi-list-item ${isSelected ? 'selected' : ''}" data-id="${r.id}">
+        const isDefault = r.short_name === '--';
+
+        // Для "--" показываем как выбранную только если нет других выбранных аудиторий
+        let isSelected = false;
+        if (isDefault) {
+            // Проверяем, есть ли другие выбранные аудитории (исключая "--")
+            const hasOtherRooms = Array.from(selectedRoomsModal).some(id => {
+                const room = CLASSROOMS.find(rr => rr.id.toString() === id);
+                return room && room.short_name !== '--';
+            });
+            isSelected = !hasOtherRooms;
+        } else {
+            isSelected = selectedRoomsModal.has(r.id.toString());
+        }
+
+        return `<div class="multi-list-item ${isSelected ? 'selected' : ''}" data-id="${r.id}" data-name="${escapeHtml(r.short_name)}">
             <input type="checkbox" ${isSelected ? 'checked' : ''} tabindex="-1">
             <span class="name">🏫 ${escapeHtml(r.short_name)}</span>
             <span class="pmk-badge">${getRoomBuilding(r.short_name)}</span>
         </div>`;
     }).join('');
+
     container.querySelectorAll('.multi-list-item').forEach(item => {
-        item.addEventListener('click', () => {
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
             const id = item.dataset.id;
+            const roomName = item.dataset.name;
             const checkbox = item.querySelector('input[type="checkbox"]');
-            checkbox.checked = !checkbox.checked;
-            if (checkbox.checked) { selectedRoomsModal.add(id); item.classList.add('selected'); }
-            else { selectedRoomsModal.delete(id); item.classList.remove('selected'); }
+
+            // Если это "--"
+            if (roomName === '--') {
+                // Проверяем, есть ли другие выбранные аудитории
+                const hasOtherRooms = Array.from(selectedRoomsModal).some(rid => {
+                    const room = CLASSROOMS.find(r => r.id.toString() === rid);
+                    return room && room.short_name !== '--';
+                });
+
+                if (hasOtherRooms) {
+                    // Если есть другие аудитории, показываем предупреждение
+                    showNotification('Сначала очистите выбранные аудитории', 'warning');
+                    return;
+                }
+
+                // Если нет других аудиторий, ничего не делаем (уже выбрана)
+                if (!hasOtherRooms) {
+                    showNotification('Аудитория "--" выбрана по умолчанию', 'info');
+                }
+                return;
+            }
+
+            // Для обычных аудиторий
+            if (checkbox.checked) {
+                // Снимаем выделение
+                checkbox.checked = false;
+                item.classList.remove('selected');
+                selectedRoomsModal.delete(id);
+            } else {
+                // Выделяем аудиторию
+                checkbox.checked = true;
+                item.classList.add('selected');
+                selectedRoomsModal.add(id);
+            }
+
             renderRoomTags();
             updateBadge('room');
+            // Перерисовываем список, чтобы обновить состояние "--"
+            const activeBuilding = document.querySelector('#buildingTabs .pmk-tab.active')?.dataset?.building || 'all';
+            renderRoomMultiList(roomSearch?.value || '', activeBuilding);
         });
     });
+
     updateBadge('room');
+};
+
+// Добавьте в любое место после загрузки CLASSROOMS
+const getDefaultRoomId = () => {
+    const defaultRoom = CLASSROOMS.find(r => r.short_name === DEFAULT_ROOM_NAME);
+    return defaultRoom ? String(defaultRoom.id) : null;
 };
 
 const renderRoomTags = () => {
     const container = document.getElementById('selectedRoomsTags');
     if (!container) return;
-    if (selectedRoomsModal.size === 0) { container.innerHTML = ''; return; }
-    container.innerHTML = Array.from(selectedRoomsModal).map(id => {
+
+    // Показываем только реально выбранные аудитории (без "--")
+    const realRooms = Array.from(selectedRoomsModal).filter(id => {
+        const room = CLASSROOMS.find(r => r.id.toString() === id);
+        return room && room.short_name !== '--';
+    });
+
+    if (realRooms.length === 0) {
+        container.innerHTML = '<span class="tag-item tag-default">🏫 -- (по умолчанию)</span>';
+        return;
+    }
+
+    container.innerHTML = realRooms.map(id => {
         const room = CLASSROOMS.find(r => r.id.toString() === id);
         const name = room ? room.short_name : id;
         return `<span class="tag-item">🏫 ${escapeHtml(name)}<button class="tag-remove" data-id="${id}">×</button></span>`;
     }).join('');
+
     container.querySelectorAll('.tag-remove').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            selectedRoomsModal.delete(btn.dataset.id);
+            const id = btn.dataset.id;
+            selectedRoomsModal.delete(id);
             renderRoomTags();
-            renderRoomMultiList(roomSearch?.value || '');
             updateBadge('room');
+            // Перерисовываем список аудиторий
+            const activeBuilding = document.querySelector('#buildingTabs .pmk-tab.active')?.dataset?.building || 'all';
+            renderRoomMultiList(roomSearch?.value || '', activeBuilding);
         });
     });
 };
@@ -964,13 +1217,9 @@ const openManualAddModal = () => {
     }
 
     selectedTeachersModal.clear();
-    selectedRoomsModal.clear();
+    selectedRoomsModal.clear();  // Очищаем, "--" не добавляем в selectedRoomsModal
     selectedGroupsModal.clear();
     selectedCourseId = null;
-
-    updateBadge('teacher');
-    updateBadge('room');
-    updateBadge('group');
 
     if (teacherSearch) teacherSearch.value = '';
     if (roomSearch) roomSearch.value = '';
@@ -982,7 +1231,6 @@ const openManualAddModal = () => {
     f_date.value = new Date().toISOString().split('T')[0];
     f_pair.value = '';
 
-    // Очищаем теги
     const teacherTagsContainer = document.getElementById('selectedTeachersTags');
     const roomTagsContainer = document.getElementById('selectedRoomsTags');
     const groupTagsContainer = document.getElementById('selectedGroupsTags');
@@ -990,7 +1238,10 @@ const openManualAddModal = () => {
     if (roomTagsContainer) roomTagsContainer.innerHTML = '';
     if (groupTagsContainer) groupTagsContainer.innerHTML = '';
 
-    // === ВАЖНО: ПЕРЕРИСОВЫВАЕМ СПИСКИ, ЧТОБЫ УБРАТЬ ГАЛОЧКИ ===
+    updateBadge('teacher');
+    updateBadge('room');
+    updateBadge('group');
+
     const activePmk = document.querySelector('#pmkTabs .pmk-tab.active')?.dataset?.pmk || '1';
     renderTeacherMultiList('', activePmk);
     renderRoomMultiList('', 'all');
@@ -1029,6 +1280,13 @@ const closeModal = () => {
     modal.setAttribute('aria-hidden', 'true');
     modal.classList.remove('open');
     isManualAdd = false;
+
+    // ===== ОЧИЩАЕМ ПЕРЕМЕННЫЕ ПРИ ЗАКРЫТИИ =====
+    selectedTeachersModal.clear();
+    selectedRoomsModal.clear();
+    selectedGroupsModal.clear();
+    selectedCourseId = null;
+
     document.querySelectorAll('.manual-field').forEach(el => el.style.display = 'none');
 };
 
@@ -1065,101 +1323,125 @@ tables.addEventListener('click', async (e) => {
     }
 
     if (clickTimer) {
-        clearTimeout(clickTimer);
-        clickTimer = null;
-        if (isAdminMode()) {
-            if (DISCIPLINES.length === 0) await loadModalData();
-            const teacher = td.dataset.teacher;
-            const iso = td.dataset.date;
-            const index = Number(td.dataset.index);
-            const scheduleId = td.dataset.scheduleId;
-            const teacher_mid = td.dataset.teacher_mid;
-            ctx = {teacher, iso, index, scheduleId, teacher_mid};
-            const list = (DATA[teacher]?.[iso] || []);
-            const pair = list[index];
+    clearTimeout(clickTimer);
+    clickTimer = null;
+    if (isAdminMode()) {
+        if (DISCIPLINES.length === 0) await loadModalData();
+        const teacher = td.dataset.teacher;
+        const iso = td.dataset.date;
+        const index = Number(td.dataset.index);
+        const scheduleId = td.dataset.scheduleId;
+        const teacher_mid = td.dataset.teacher_mid;
+        ctx = {teacher, iso, index, scheduleId, teacher_mid};
+        const list = (DATA[teacher]?.[iso] || []);
+        const pair = list[index];
 
-            selectedTeachersModal.clear();
-            selectedRoomsModal.clear();
-            selectedGroupsModal.clear();
+        // ===== ОЧИЩАЕМ ПЕРЕМЕННЫЕ ПЕРЕД ЗАПОЛНЕНИЕМ =====
+        selectedTeachersModal.clear();
+        selectedRoomsModal.clear();
+        selectedGroupsModal.clear();
+        selectedCourseId = null;
+
+        // Очищаем поля ввода
+        if (teacherSearch) teacherSearch.value = '';
+        if (roomSearch) roomSearch.value = '';
+        if (groupSearch) groupSearch.value = '';
+        if (courseSearch) courseSearch.value = '';
+
+        // Очищаем теги
+        const teacherTagsContainer = document.getElementById('selectedTeachersTags');
+        const roomTagsContainer = document.getElementById('selectedRoomsTags');
+        const groupTagsContainer = document.getElementById('selectedGroupsTags');
+        if (teacherTagsContainer) teacherTagsContainer.innerHTML = '';
+        if (roomTagsContainer) roomTagsContainer.innerHTML = '';
+        if (groupTagsContainer) groupTagsContainer.innerHTML = '';
+
+        // Обновляем бейджи
+        updateBadge('teacher');
+        updateBadge('room');
+        updateBadge('group');
+
+        const getTypeId = (typeAlias) => { const found = LESSON_TYPES.find(item => item.alias === typeAlias); return found ? found.id : ''; };
+        const getCourseId = (courseAlias) => { const found = DISCIPLINES.find(item => item.alias === courseAlias); return found ? found.id : ''; };
+
+        if (pair) {
+            f_type.value = getTypeId(pair.type);
+            f_lesson_num.value = pair.lesson_num || '';
+
+            // Заполняем дисциплину
+            const courseId = getCourseId(pair.course);
+            selectedCourseId = courseId;
+            const course = DISCIPLINES.find(c => c.id == courseId);
+            if (courseSearch) courseSearch.value = course ? `${course.alias} — ${course.title}` : '';
+
+            // Заполняем преподавателей
+            if (pair.teachers && pair.teachers.length > 0) {
+                pair.teachers.forEach(t => selectedTeachersModal.add(t));
+            }
+            renderTeacherTags();
             updateBadge('teacher');
-            updateBadge('room');
-            updateBadge('group');
-            if (teacherSearch) teacherSearch.value = '';
-            if (roomSearch) roomSearch.value = '';
-            if (groupSearch) groupSearch.value = '';
 
-            const getTypeId = (typeAlias) => { const found = LESSON_TYPES.find(item => item.alias === typeAlias); return found ? found.id : ''; };
-            const getCourseId = (courseAlias) => { const found = DISCIPLINES.find(item => item.alias === courseAlias); return found ? found.id : ''; };
-
-            if (pair) {
-                f_type.value = getTypeId(pair.type);
-                f_lesson_num.value = pair.lesson_num || '';
-
-                // Заполняем дисциплину
-                const courseId = getCourseId(pair.course);
-                selectedCourseId = courseId;
-                const course = DISCIPLINES.find(c => c.id == courseId);
-                if (courseSearch) courseSearch.value = course ? `${course.alias} — ${course.title}` : '';
-
-                // Заполняем преподавателей
-                if (pair.teachers && pair.teachers.length > 0) {
-                    pair.teachers.forEach(t => selectedTeachersModal.add(t));
-                } else if (teacher) {
-                    // selectedTeachersModal.add(teacher);
-                }
-                renderTeacherTags();
-                updateBadge('teacher');
-
-                // Заполняем аудитории (ищем ID по названиям)
-                if (pair.rooms && pair.rooms.length > 0) {
-                    pair.rooms.forEach(roomName => {
-                        const room = CLASSROOMS.find(r => r.short_name === roomName);
-                        if (room) {
-                            selectedRoomsModal.add(String(room.id));
-                        }
-                    });
-                } else if (pair.room) {
-                    const roomObj = CLASSROOMS.find(r => r.short_name === pair.room);
-                    if (roomObj) {
-                        selectedRoomsModal.add(String(roomObj.id));
+            // Заполняем аудитории
+            if (pair.rooms && pair.rooms.length > 0) {
+                pair.rooms.forEach(roomName => {
+                    const room = CLASSROOMS.find(r => r.short_name === roomName);
+                    if (room) {
+                        selectedRoomsModal.add(String(room.id));
                     }
+                });
+            } else if (pair.room) {
+                const roomObj = CLASSROOMS.find(r => r.short_name === pair.room);
+                if (roomObj) {
+                    selectedRoomsModal.add(String(roomObj.id));
                 }
-                renderRoomTags();
-                updateBadge('room');
+            }
+            renderRoomTags();
+            updateBadge('room');
 
-                // Заполняем группы (ищем ID по названиям)
-                if (pair.groups && pair.groups.length > 0) {
-                    pair.groups.forEach(groupName => {
-                        const groupObj = GROUPS.find(g => g.name === groupName);
-                        if (groupObj) {
-                            selectedGroupsModal.add(String(groupObj.id));
-                        }
-                    });
-                } else if (pair.group) {
-                    const groupObj = GROUPS.find(g => g.name === pair.group);
+            // Заполняем группы
+            if (pair.groups && pair.groups.length > 0) {
+                pair.groups.forEach(groupName => {
+                    const groupObj = GROUPS.find(g => g.name === groupName);
                     if (groupObj) {
                         selectedGroupsModal.add(String(groupObj.id));
                     }
+                });
+            } else if (pair.group) {
+                const groupObj = GROUPS.find(g => g.name === pair.group);
+                if (groupObj) {
+                    selectedGroupsModal.add(String(groupObj.id));
                 }
-                renderGroupTags();
-                updateBadge('group');
-            } else {
-                f_type.value = '';
-                selectedCourseId = null;
-                if (courseSearch) courseSearch.value = '';
-                f_lesson_num.value = '';
             }
-            btnDelete.style.display = pair && pair.schedule_id ? 'inline-flex' : 'none';
-            openModal(`${teacher} — ${iso}`, { teacher, date: iso, index, scheduleId });
+            renderGroupTags();
+            updateBadge('group');
+        } else {
+            f_type.value = '';
+            selectedCourseId = null;
+            if (courseSearch) courseSearch.value = '';
+            f_lesson_num.value = '';
         }
-        return;
+
+        // ===== ПЕРЕРИСОВЫВАЕМ СПИСКИ С УЧЕТОМ ОЧИЩЕННЫХ ДАННЫХ =====
+        const activePmk = document.querySelector('#pmkTabs .pmk-tab.active')?.dataset?.pmk || '1';
+        renderTeacherMultiList('', activePmk);
+        renderRoomMultiList('', 'all');
+        renderGroupMultiList('', 'all');
+
+        btnDelete.style.display = pair && pair.schedule_id ? 'inline-flex' : 'none';
+        openModal(`${teacher} — ${iso}`, { teacher, date: iso, index, scheduleId });
     }
+    return;
+}
     selectCell(td);
     clickTimer = setTimeout(() => { clickTimer = null; }, 300);
 });
 
 /* ===== Сохранение / Удаление ===== */
 btnSave.addEventListener('click', async () => {
+    // СОХРАНЯЕМ ПОЗИЦИЮ ПЕРЕД ВСЕМ
+    const savedPosition = saveExactScrollPosition();
+    console.log('📌 Сохранена позиция перед сохранением:', savedPosition);
+
     if (isManualAdd) {
         const selectedDate = f_date.value;
         const selectedPair = f_pair.value;
@@ -1180,8 +1462,7 @@ btnSave.addEventListener('click', async () => {
         const teacherNames = Array.from(selectedTeachersModal);
         const courseId = getSelectedCourseId();
 
-        // Получаем массивы ID
-        const roomIds = Array.from(selectedRoomsModal).map(id => parseInt(id));
+        const roomIds = getSelectedRoomsForSubmit().map(id => parseInt(id));
         const groupIds = Array.from(selectedGroupsModal).map(id => parseInt(id));
 
         const scheduleData = {
@@ -1194,21 +1475,19 @@ btnSave.addEventListener('click', async () => {
             cid: courseId || '',
             lesson_num: f_lesson_num.value.trim() || null,
             teachers: teacherNames,
-            rooms: roomIds,                    // массив всех аудиторий
-            rid: roomIds,                      // массив всех аудиторий (для БД)
-            groups: groupIds,                  // массив всех групп
-            gid: groupIds[0] || ''             // первая группа как основная (одно число)
+            rooms: roomIds,
+            rid: roomIds,
+            groups: groupIds,
+            gid: groupIds[0] || ''
         };
 
-        // Валидация: проверяем что есть хотя бы одна аудитория и группа
-        if (!scheduleData.typeid || !scheduleData.cid || !roomIds.length || !groupIds.length) {
-            alert('Пожалуйста, заполните все обязательные поля');
+        if (!scheduleData.typeid || !scheduleData.cid || !groupIds.length) {
+            alert('Пожалуйста, заполните все обязательные поля (тип занятия, дисциплина, группа)');
             return;
         }
 
         try {
             skipAutoScroll = true;
-            saveScrollPosition();
             const result = await postSchedule(scheduleData);
 
             if (result.success) {
@@ -1217,6 +1496,13 @@ btnSave.addEventListener('click', async () => {
                 const selectedTeachers = getSelectedTeachers();
                 const monthVal = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
                 await loadScheduleData(selectedTeachers, monthVal);
+
+                // ВОССТАНАВЛИВАЕМ ПОЗИЦИЮ ПОСЛЕ ЗАГРУЗКИ
+                setTimeout(() => {
+                    restoreExactScrollPosition(savedPosition);
+                    console.log('📍 Позиция восстановлена после добавления');
+                }, 200);
+
                 alert('Расписание успешно добавлено!');
             } else {
                 alert('Ошибка при добавлении: ' + (result.error || 'Неизвестная ошибка'));
@@ -1233,8 +1519,7 @@ btnSave.addEventListener('click', async () => {
     const teacherNames = Array.from(selectedTeachersModal);
     const courseId = getSelectedCourseId();
 
-    // Получаем массивы ID
-    const roomIds = Array.from(selectedRoomsModal).map(id => parseInt(id));
+    const roomIds = getSelectedRoomsForSubmit().map(id => parseInt(id));
     const groupIds = Array.from(selectedGroupsModal).map(id => parseInt(id));
 
     const scheduleData = {
@@ -1247,19 +1532,18 @@ btnSave.addEventListener('click', async () => {
         cid: courseId || '',
         lesson_num: f_lesson_num.value.trim() || null,
         teachers: teacherNames,
-        rooms: roomIds,                    // массив всех аудиторий
-        rid: roomIds,                      // массив всех аудиторий (для БД)
-        groups: groupIds,                  // массив всех групп
-        gid: groupIds[0] || ''             // первая группа как основная
+        rooms: roomIds,
+        rid: roomIds,
+        groups: groupIds,
+        gid: groupIds[0] || ''
     };
 
     if (!scheduleData.typeid || !scheduleData.cid) {
-        alert('Пожалуйста, заполните обязательные поля');
+        alert('Пожалуйста, заполните обязательные поля (тип занятия, дисциплина)');
         return;
     }
 
     try {
-        saveScrollPosition();
         let result;
         if (scheduleId) {
             scheduleData.schedule_id = scheduleId;
@@ -1273,6 +1557,13 @@ btnSave.addEventListener('click', async () => {
             const selectedTeachers = getSelectedTeachers();
             const monthVal = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
             await loadScheduleData(selectedTeachers, monthVal);
+
+            // ВОССТАНАВЛИВАЕМ ПОЗИЦИЮ ПОСЛЕ ЗАГРУЗКИ
+            setTimeout(() => {
+                restoreExactScrollPosition(savedPosition);
+                console.log('📍 Позиция восстановлена после сохранения');
+            }, 200);
+
             alert('Расписание успешно сохранено!');
         } else {
             alert('Ошибка при сохранении: ' + (result.error || 'Неизвестная ошибка'));
@@ -1286,13 +1577,21 @@ btnSave.addEventListener('click', async () => {
 btnDelete.addEventListener('click', async () => {
     if (!ctx || !ctx.scheduleId) return;
     if (!confirm('Вы уверены, что хотите удалить эту запись?')) return;
+
+    // СОХРАНЯЕМ ПОЗИЦИЮ
+    const savedPosition = saveExactScrollPosition();
+
     try {
-        saveScrollPosition();
+        skipAutoScroll = true;
         await deleteSchedule(ctx.scheduleId);
         closeModal();
         const sel = getSelectedTeachers();
         const monthVal = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
         await loadScheduleData(sel, monthVal);
+
+        setTimeout(() => {
+            restoreExactScrollPosition(savedPosition);
+        }, 200);
     } catch (error) {
         alert('Ошибка при удалении: ' + error.message);
     }
@@ -2499,12 +2798,11 @@ const loadScheduleData = async (teachers, month) => {
 };
 
 const renderTable = async () => {
-    const sel = getSelectedTeachers(), monthVal = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+    const sel = getSelectedTeachers();
+    const monthVal = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
 
-    // === СОХРАНЯЕМ ТОЧНУЮ ПОЗИЦИЮ ПЕРЕД ОЧИСТКОЙ ===
-    const wrap = document.querySelector('.table-wrap');
-    const savedScrollTop = window.scrollY || window.pageYOffset;
-    const savedScrollLeft = wrap ? wrap.scrollLeft : 0;
+    // СОХРАНЯЕМ ПОЗИЦИЮ ПЕРЕД ОЧИСТКОЙ
+    const savedPosition = saveExactScrollPosition();
 
     tables.innerHTML = '';
 
@@ -2513,43 +2811,33 @@ const renderTable = async () => {
         await populateJumpTeacher();
         return;
     }
+
+    let table;
     if (sel.length > 1) {
-        const table = await renderCombinedStacked(sel, monthVal);
-        tables.appendChild(table);
+        table = await renderCombinedStacked(sel, monthVal);
     } else {
-        const table = await renderTeacher(sel[0], monthVal);
-        tables.appendChild(table);
+        table = await renderTeacher(sel[0], monthVal);
     }
+    tables.appendChild(table);
 
     await populateJumpTeacher();
 
-    // === ВОССТАНАВЛИВАЕМ ПОЗИЦИЮ ===
-    if (skipAutoScroll) {
-        // После вставки/удаления — возвращаем точную позицию
-        console.log('⏸️ Восстанавливаю позицию после операции');
-        window.scrollTo(0, savedScrollTop);
-        const newWrap = document.querySelector('.table-wrap');
-        if (newWrap) {
-            newWrap.scrollLeft = savedScrollLeft;
+    // ВОССТАНАВЛИВАЕМ ПОЗИЦИЮ
+    setTimeout(() => {
+        if (skipAutoScroll) {
+            // Если skipAutoScroll true, позиция уже была сохранена отдельно
+            skipAutoScroll = false;
+        } else {
+            restoreExactScrollPosition(savedPosition);
         }
-        skipAutoScroll = false;
-    } else if (pendingScrollRestore) {
-        // При смене месяца — восстанавливаем по преподавателю
-        console.log('📍 Восстанавливаю позицию после смены месяца');
-        setTimeout(() => forceRestoreScroll(), 200);
-    } else {
-        // Первая загрузка — к сегодня
-        const todayElement = document.querySelector('.today');
-        if (todayElement) todayElement.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'center' });
-    }
-
-    const newWrap = getWrap();
-    if (newWrap) { updateNavDisabled(); }
+        updateNavDisabled();
+    }, 150);
 };
 
 // Добавьте в render() перед loadScheduleData
 const render = () => {
-    const sel = getSelectedTeachers(), monthVal = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+    const sel = getSelectedTeachers();
+    const monthVal = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
     if (!monthVal) return;
     loadScheduleData(sel, monthVal);
 };

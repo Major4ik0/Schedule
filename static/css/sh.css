@@ -4110,3 +4110,14 @@ body.theme-dark .rail {
     background: #eef2ff;
     border-left: 3px solid #5b45ff;
 }
+
+.tag-default {
+    background: var(--primary-light, #e0e7ff);
+    border-color: var(--primary, #3b82f6);
+    color: var(--primary, #3b82f6);
+    font-style: italic;
+}
+
+.tag-default .tag-remove {
+    display: none;
+}
