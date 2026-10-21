@@ -1,0 +1,136 @@
+name: Build and Release Docker Image
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Версия (например, v28)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine Version
+        id: get_version
+        run: |
+          VERSION=$(python3 -c "
+          import os, re, sys
+
+          input_ver = os.environ.get('INPUT_VERSION', '').strip()
+          ref_name = os.environ.get('GITHUB_REF_NAME', '').strip()
+          ref_type = os.environ.get('GITHUB_REF_TYPE', '').strip()
+          commit_msg = sys.stdin.read().strip()
+
+          if input_ver:
+              ver = input_ver
+          elif ref_type == 'tag' and ref_name:
+              ver = ref_name
+          else:
+              # Поиск версий вида v28, v28.1, v1.0.0
+              m = re.search(r'\b(v\d+(?:\.\d+)*)\b', commit_msg, re.IGNORECASE)
+              if m:
+                  ver = m.group(1).lower()
+              else:
+                  # Поиск чистого числа, например '28'
+                  m = re.search(r'\b(\d+(?:\.\d+)*)\b', commit_msg)
+                  if m:
+                      ver = f'v{m.group(1)}'
+                  else:
+                      ver = f'v{os.environ.get(\"GITHUB_RUN_NUMBER\", \"latest\")}'
+
+          if not ver.startswith('v'):
+              ver = f'v{ver}'
+
+          print(ver)
+          " <<< "$(git log -1 --pretty=%B)")
+
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "Определена версия: ${VERSION}"
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        run: |
+          echo "Сборка Docker-образа для платформы linux/amd64..."
+          docker build --platform linux/amd64 -t schedule -t schedule:${{ env.VERSION }} .
+
+      - name: Save Docker Image to TAR
+        run: |
+          echo "Сохранение образа в schedule_${{ env.VERSION }}.tar..."
+          docker save -o "schedule_${{ env.VERSION }}.tar" schedule
+
+          ls -lh "schedule_${{ env.VERSION }}.tar"
+
+      - name: Prepare Release Notes
+        run: |
+          python3 -c "
+          import os
+
+          ver = os.environ['VERSION']
+          repo = os.environ['GITHUB_REPOSITORY']
+
+          notes = f'''### 📦 Docker образ \`schedule_{ver}.tar\`
+
+          Сборка выполнена для платформы **linux/amd64** (Ubuntu).
+
+          #### 🚀 Инструкция по запуску на сервере Ubuntu:
+
+          **1. Скачайте архив образа на сервер:**
+          \`\`\`bash
+          curl -L -O https://github.com/{repo}/releases/download/{ver}/schedule_{ver}.tar
+          \`\`\`
+
+          **2. Загрузите образ в Docker:**
+          \`\`\`bash
+          docker load -i schedule_{ver}.tar
+          \`\`\`
+
+          **3. Перезапустите контейнер:**
+          \`\`\`bash
+          docker stop schedule 2>/dev/null || true
+          docker rm schedule 2>/dev/null || true
+          docker run -d --name schedule --restart unless-stopped -p 5123:5123 schedule
+          \`\`\`
+          '''
+
+          with open('release_notes.md', 'w', encoding='utf-8') as f:
+              f.write(notes.strip() + '\n')
+          "
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ARCHIVE_NAME="schedule_${{ env.VERSION }}.tar"
+          RELEASE_TAG="${{ env.VERSION }}"
+
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Релиз $RELEASE_TAG уже существует, обновляем файл..."
+            gh release upload "$RELEASE_TAG" "$ARCHIVE_NAME" --clobber
+          else
+            echo "Создаем релиз $RELEASE_TAG..."
+            gh release create "$RELEASE_TAG" "$ARCHIVE_NAME" \
+              --title "Release $RELEASE_TAG" \
+              --target "${{ github.sha }}" \
+              --notes-file release_notes.md
+          fi

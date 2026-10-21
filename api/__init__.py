@@ -2,6 +2,7 @@
 # from .schedule import api_bp
 # from .teachers import api_th
 from .workload_api import workload_bp
+from .schedule_import import import_bp
 #
 #
 # def init_app(app):
@@ -24,3 +25,4 @@ def init_app(app):
     """Инициализация API blueprint"""
     app.register_blueprint(api_bp)
     app.register_blueprint(workload_bp)
+    app.register_blueprint(import_bp)

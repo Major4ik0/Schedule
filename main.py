@@ -82,4 +82,4 @@ def trainer():
     return render_template('trainer.html')
 
 
-# app.run(host='0.0.0.0', port=5123, debug=True)
+# app.run(host='0.0.0.0', port=5122, debug=True)

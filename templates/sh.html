@@ -76,8 +76,72 @@
             <button class="btn primary" id="addSchedule" style="background: linear-gradient(180deg, #22c55e, #16a34a);">Добавить занятие</button>
             <button class="btn ghost" id="switchMode">Замена</button>
             <button class="btn ghost export" id="print">Печать</button>
+            {% if is_admin %}
+            <button class="btn ghost admin-import-toggle" id="toggleImportBtn" type="button" title="Импорт и обновление расписания из Excel">
+                <span style="font-size: 14px;">📥</span> Импорт Excel
+            </button>
+            {% endif %}
         </div>
     </section>
+
+    {% if is_admin %}
+    <div class="admin-import-panel" id="adminImportPanel">
+        <div class="admin-import-card">
+            <div class="admin-import-header">
+                <div class="admin-import-title-group">
+                    <div class="admin-import-icon-badge">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="8" y1="13" x2="16" y2="13"></line>
+                            <line x1="8" y1="17" x2="16" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="admin-import-title">Импорт и обновление расписания (Excel)</h3>
+                        <p class="admin-import-subtitle">Загрузите один или несколько файлов Excel (.xlsx, .xls). Все файлы будут обработаны по очереди, результаты — сводные.</p>
+                    </div>
+                </div>
+                <button class="admin-import-close-btn" id="closeImportBtn" type="button" title="Скрыть панель">✕</button>
+            </div>
+
+            <div class="admin-import-body">
+                <div class="admin-import-dropzone" id="excelDropZone">
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls" multiple style="display: none;">
+                    <div class="dropzone-icon">📊</div>
+                    <div class="dropzone-text">
+                        <span class="dropzone-primary-text">Нажмите для выбора Excel файлов</span> или перетащите их сюда
+                    </div>
+                    <div class="dropzone-hint">Поддерживаются форматы .xlsx и .xls</div>
+                </div>
+
+                <div class="admin-import-actions">
+                    <span id="fileNameLabel" class="admin-file-name-label">Файлы не выбраны</span>
+                    <div class="admin-import-btn-group">
+                        <button class="admin-clear-btn" id="clearFilesBtn" onclick="clearSelectedFiles()" style="display:none;" type="button">
+                            ✕ Очистить
+                        </button>
+                        <button class="admin-upload-btn" id="uploadExcelBtn" onclick="uploadScheduleFiles()" type="button">
+                            🚀 Загрузить и обновить
+                        </button>
+                    </div>
+                </div>
+
+                <div id="filesList" class="admin-files-list"></div>
+
+                <div id="importProgress" class="admin-import-progress" style="display: none;">
+                    <div class="admin-progress-track">
+                        <div id="importProgressBar" class="admin-progress-bar"></div>
+                    </div>
+                    <div id="importProgressText" class="admin-progress-text">0 / 0</div>
+                </div>
+
+                <div id="importStatus" class="admin-import-status"></div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="tables-container" id="tables">
         <div class="note" id="notes" style="margin-top: 6px; padding: 20px; text-align: center; color: #6b7280;">
@@ -336,6 +400,245 @@
     IS_ADMIN_MODE = {{'true' if is_admin else 'false'}}
 </script>
 <script defer src="{{ url_for('static', filename='js/sh.js') }}"></script>
+<script>
+    // Управление панелью импорта
+    function toggleImportPanel(forceOpen = null) {
+        const panel = document.getElementById('adminImportPanel');
+        const btn = document.getElementById('toggleImportBtn');
+        if (!panel) return;
+
+        const isOpen = panel.classList.contains('open');
+        const nextState = forceOpen !== null ? forceOpen : !isOpen;
+
+        if (nextState) {
+            panel.classList.add('open');
+            btn?.classList.add('active');
+            // Плавный скролл к панели, если она выходит за экран
+            setTimeout(() => {
+                const rect = panel.getBoundingClientRect();
+                if (rect.top < 0 || rect.bottom > window.innerHeight) {
+                    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }, 100);
+        } else {
+            panel.classList.remove('open');
+            btn?.classList.remove('active');
+        }
+    }
+
+    document.getElementById('toggleImportBtn')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleImportPanel();
+    });
+
+    document.getElementById('closeImportBtn')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleImportPanel(false);
+    });
+
+    // Хранилище выбранных файлов
+    let selectedFiles = [];
+
+    const excelFileInput = document.getElementById('excelFileInput');
+    excelFileInput?.addEventListener('change', function(e) {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+        selectedFiles = files;
+        renderSelectedFiles();
+    });
+
+    // Поддержка Drag & Drop
+    const excelDropZone = document.getElementById('excelDropZone');
+    if (excelDropZone && excelFileInput) {
+        excelDropZone.addEventListener('click', (e) => {
+            if (e.target !== excelFileInput) {
+                excelFileInput.click();
+            }
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            excelDropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                excelDropZone.classList.add('drag-over');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            excelDropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                excelDropZone.classList.remove('drag-over');
+            });
+        });
+
+        excelDropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = Array.from(dt.files || []).filter(f =>
+                f.name.toLowerCase().endsWith('.xlsx') || f.name.toLowerCase().endsWith('.xls')
+            );
+
+            if (!files.length) {
+                alert('Пожалуйста, перетащите файлы формата Excel (.xlsx или .xls)!');
+                return;
+            }
+
+            selectedFiles = files;
+            renderSelectedFiles();
+        });
+    }
+
+    function renderSelectedFiles() {
+        const label = document.getElementById('fileNameLabel');
+        const list = document.getElementById('filesList');
+        const clearBtn = document.getElementById('clearFilesBtn');
+        if (!label || !list) return;
+
+        if (!selectedFiles.length) {
+            label.textContent = 'Файлы не выбраны';
+            list.innerHTML = '';
+            if (clearBtn) clearBtn.style.display = 'none';
+            return;
+        }
+
+        label.textContent = `Выбрано файлов: ${selectedFiles.length}`;
+        if (clearBtn) clearBtn.style.display = 'inline-flex';
+
+        const totalSize = selectedFiles.reduce((s, f) => s + f.size, 0);
+        const formattedSize = totalSize > 1024 * 1024
+            ? `${(totalSize / (1024 * 1024)).toFixed(2)} МБ`
+            : `${(totalSize / 1024).toFixed(1)} КБ`;
+
+        list.innerHTML = `
+            <div class="admin-files-summary">Общий размер: <b>${formattedSize}</b></div>
+            <div class="admin-files-badges">
+                ${selectedFiles.map((f, i) => `
+                    <span class="admin-file-badge">
+                        <span>📄 ${f.name}</span>
+                        <span style="color:var(--muted); font-size:11px;">(${(f.size / 1024).toFixed(0)} КБ)</span>
+                        <button type="button" onclick="removeFile(${i})" class="admin-file-badge-remove" title="Удалить файл">✕</button>
+                    </span>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    function removeFile(index) {
+        selectedFiles.splice(index, 1);
+        renderSelectedFiles();
+    }
+
+    function clearSelectedFiles() {
+        selectedFiles = [];
+        const fileInput = document.getElementById('excelFileInput');
+        if (fileInput) fileInput.value = '';
+        renderSelectedFiles();
+    }
+
+    async function uploadScheduleFiles() {
+        const statusDiv = document.getElementById('importStatus');
+        const progress = document.getElementById('importProgress');
+        const progressBar = document.getElementById('importProgressBar');
+        const progressText = document.getElementById('importProgressText');
+        const uploadBtn = document.getElementById('uploadExcelBtn');
+
+        if (!selectedFiles.length) {
+            alert('Пожалуйста, выберите хотя бы один Excel файл!');
+            return;
+        }
+
+        if (uploadBtn) uploadBtn.disabled = true;
+
+        statusDiv.innerHTML = `
+            <div class="admin-status-box loading">
+                ⏳ Идет обработка файлов...
+            </div>
+        `;
+        progress.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.innerHTML = `<span>Старт обработки...</span><span>0 / ${selectedFiles.length}</span>`;
+
+        let totalInserted = 0;
+        let totalUpdated = 0;
+        let totalSkipped = 0;
+        const fileResults = [];
+
+        for (let i = 0; i < selectedFiles.length; i++) {
+            const file = selectedFiles[i];
+            progressText.innerHTML = `<span>Обработка: <b>${file.name}</b></span><span>${i + 1} / ${selectedFiles.length}</span>`;
+            progressBar.style.width = `${((i) / selectedFiles.length) * 100}%`;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/schedule/import', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    totalInserted += result.stats?.inserted || 0;
+                    totalUpdated  += result.stats?.updated  || 0;
+                    totalSkipped  += result.stats?.skipped  || 0;
+                    fileResults.push({
+                        name: file.name,
+                        ok: true,
+                        message: result.message,
+                        stats: result.stats
+                    });
+                } else {
+                    fileResults.push({
+                        name: file.name,
+                        ok: false,
+                        message: result.error || 'Ошибка при загрузке'
+                    });
+                }
+            } catch (err) {
+                fileResults.push({
+                    name: file.name,
+                    ok: false,
+                    message: 'Сетевая ошибка: ' + err.message
+                });
+            }
+
+            progressBar.style.width = `${((i + 1) / selectedFiles.length) * 100}%`;
+        }
+
+        if (uploadBtn) uploadBtn.disabled = false;
+
+        // Итог
+        const okCount = fileResults.filter(r => r.ok).length;
+        const failCount = fileResults.length - okCount;
+
+        statusDiv.innerHTML = `
+            <div class="admin-status-box ${failCount ? 'error' : 'success'}">
+                <div style="font-weight: 600; font-size: 14px; margin-bottom: 6px;">
+                    ${failCount ? '⚠️ Импорт завершен с замечаниями' : '✅ Расписание успешно обновлено!'}
+                </div>
+                <div>Обработано файлов: <b>${okCount}</b> из <b>${selectedFiles.length}</b>${failCount ? `, с ошибками: <b>${failCount}</b>` : ''}</div>
+                <div style="margin-top: 6px; font-size: 12px; opacity: 0.9;">
+                    Всего добавлено: <b>${totalInserted}</b>, обновлено: <b>${totalUpdated}</b>, пропущено: <b>${totalSkipped}</b>
+                </div>
+                <details style="margin-top: 10px; font-size: 12px;">
+                    <summary style="cursor: pointer; font-weight: 500;">Показать подробный отчет по файлам</summary>
+                    <ul style="margin: 8px 0 0 16px; padding: 0;">
+                        ${fileResults.map(r => `
+                            <li style="margin-bottom: 4px;">
+                                ${r.ok ? '✅' : '❌'} <b>${r.name}</b> — ${r.message}
+                            </li>
+                        `).join('')}
+                    </ul>
+                </details>
+            </div>
+        `;
+
+        progressText.innerHTML = `<span>Завершено!</span><span>${selectedFiles.length} / ${selectedFiles.length}</span>`;
+
+        if (typeof loadSchedule === 'function') loadSchedule();
+    }
+</script>
 
 <!-- AI Assistant Widget -->
 <div class="ai-widget" id="aiWidget">

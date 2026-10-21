@@ -2845,19 +2845,19 @@ const render = () => {
 /* ===== UI слушатели ===== */
 printBtn.addEventListener('click', () => {
     const now = new Date();
-    const printDate = now.toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    document.body.setAttribute('data-print-date', printDate);
-    const printHeader = document.createElement('div');
-    printHeader.className = 'print-header';
-    printHeader.innerHTML = `<h1>Расписание преподавателей</h1><div class="print-date">Дата печати: ${printDate}</div>`;
-    const sel = getSelectedTeachers();
-    const monthVal = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
-    const printInfo = document.createElement('div');
-    printInfo.className = 'print-info';
-    printInfo.innerHTML = `<strong>Период:</strong> ${formatMonthTitle(monthVal)}<br><strong>Преподаватели:</strong> ${sel.join(', ')}<br><strong>Количество преподавателей:</strong> ${sel.length}`;
-    if (tables.firstChild) { tables.insertBefore(printHeader, tables.firstChild); tables.insertBefore(printInfo, tables.firstChild.nextSibling); }
+    // const printDate = now.toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    // document.body.setAttribute('data-print-date', printDate);
+    // const printHeader = document.createElement('div');
+    // printHeader.className = 'print-header';
+    // printHeader.innerHTML = `<h1>Расписание преподавателей</h1><div class="print-date">Дата печати: ${printDate}</div>`;
+    // const sel = getSelectedTeachers();
+    // const monthVal = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+    // const printInfo = document.createElement('div');
+    // printInfo.className = 'print-info';
+    // printInfo.innerHTML = `<strong>Период:</strong> ${formatMonthTitle(monthVal)}<br><strong>Преподаватели:</strong> ${sel.join(', ')}<br><strong>Количество преподавателей:</strong> ${sel.length}`;
+    // if (tables.firstChild) { tables.insertBefore(printHeader, tables.firstChild); tables.insertBefore(printInfo, tables.firstChild.nextSibling); }
     window.print();
-    setTimeout(() => { if (printHeader.parentNode) printHeader.remove(); if (printInfo.parentNode) printInfo.remove(); }, 100);
+    // setTimeout(() => { if (printHeader.parentNode) printHeader.remove(); if (printInfo.parentNode) printInfo.remove(); }, 100);
 });
 
 // В начале функции buildBtn.addEventListener (поиск преподавателей изменился):
@@ -3325,8 +3325,22 @@ const init = async () => {
     try {
         GROUP_COLOR_CACHE.clear();
         const adminMode = isAdminMode();
-        if (adminMode) { document.body.classList.add('admin-on', 'admin-mode'); adminInfo.style.display = 'block'; userInfo.style.display = 'none'; }
-        else { document.body.classList.remove('admin-on', 'admin-mode'); adminInfo.style.display = 'none'; userInfo.style.display = 'block'; switchModeBtn.style.display = 'none'; if (addScheduleBtn) addScheduleBtn.style.display = 'none'; }
+        const toggleImportBtn = document.getElementById('toggleImportBtn');
+        const adminImportPanel = document.getElementById('adminImportPanel');
+        if (adminMode) {
+            document.body.classList.add('admin-on', 'admin-mode');
+            adminInfo.style.display = 'block';
+            userInfo.style.display = 'none';
+            if (toggleImportBtn) toggleImportBtn.style.display = '';
+        } else {
+            document.body.classList.remove('admin-on', 'admin-mode');
+            adminInfo.style.display = 'none';
+            userInfo.style.display = 'block';
+            switchModeBtn.style.display = 'none';
+            if (addScheduleBtn) addScheduleBtn.style.display = 'none';
+            if (toggleImportBtn) toggleImportBtn.style.display = 'none';
+            if (adminImportPanel) adminImportPanel.style.display = 'none';
+        }
         await fillTeachers();
         await loadModalData();
         initDateSelectors();

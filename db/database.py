@@ -11,7 +11,7 @@ class DataBase:
             "user": "postgres",
             "password": "12345678",
             "host": "10.55.12.97",
-            # "host": "localhost",
+            # "host": "217.60.98.50",
             "port": "5432",
         }
         self.conn = None
